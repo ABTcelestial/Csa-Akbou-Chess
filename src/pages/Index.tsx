@@ -2,7 +2,7 @@ import Layout from "@/components/Layout";
 import Reveal from "@/components/Reveal";
 import { Link } from "react-router-dom";
 import { Camera, ArrowRight, ChevronRight, Star, Loader2, Users, Target, Trophy, Calendar, MapPin } from "lucide-react";
-import { useGallery, useSiteConfig, useTournaments } from "@/hooks/useSupabase";
+import { useGallery, useSiteConfig, useTournaments, usePlayers } from "@/hooks/useSupabase";
 import { useMemo } from "react";
 import heroImage from "@/assets/hero-chess.jpg";
 import tournamentImage from "@/assets/tournament.jpg";
@@ -10,6 +10,7 @@ import tournamentImage from "@/assets/tournament.jpg";
 const Index = () => {
   const { data: gallery, loading: galleryLoading } = useGallery();
   const { data: tournaments } = useTournaments();
+  const { data: players } = usePlayers();
   const { get } = useSiteConfig();
 
   const nextTournament = useMemo(() =>
@@ -44,7 +45,15 @@ const Index = () => {
   const currentYear = new Date().getFullYear();
   const yearsExist  = founded ? currentYear - parseInt(founded) : null;
 
-  const schedule = (get('schedule', []) as { day: string; hours: string }[]);
+  const schedule      = (get('schedule',      []) as { day: string; hours: string }[]);
+  const clubValues    = (get('values',        []) as { title: string; desc: string }[]);
+  const testimonials  = (get('testimonials',  []) as { name: string; role: string; text: string }[]);
+  const sponsors      = (get('sponsors',      []) as { name: string; logo_url?: string; url?: string }[]);
+
+  // Stats dynamiques : compte réel depuis la DB
+  const dynamicMembers    = players.length > 0 ? players.length.toString() : members;
+  const pastTournamentsCount = tournaments.filter(t => t.is_past).length;
+  const dynamicTournaments = pastTournamentsCount > 0 ? pastTournamentsCount.toString() : tournamentsPerYear;
 
   return (
     <Layout>
@@ -192,19 +201,19 @@ const Index = () => {
                 {aboutTextShort && (
                   <p className="text-muted-foreground leading-relaxed mb-8">{aboutTextShort}</p>
                 )}
-                {/* Stats */}
-                {(members || tournamentsPerYear || teams) && (
+                {/* Stats dynamiques */}
+                {(dynamicMembers || dynamicTournaments || teams) && (
                   <div className="grid grid-cols-3 gap-4">
-                    {members && (
+                    {dynamicMembers && (
                       <div className="rounded-xl border p-4 text-center" style={{ background: "hsl(var(--chess-blue)/0.04)", borderColor: "hsl(var(--chess-blue)/0.12)" }}>
-                        <p className="text-2xl font-display font-bold" style={{ color: "hsl(var(--chess-blue))" }}>{members}</p>
+                        <p className="text-2xl font-display font-bold" style={{ color: "hsl(var(--chess-blue))" }}>{dynamicMembers}</p>
                         <p className="text-xs text-muted-foreground mt-1">Membres</p>
                       </div>
                     )}
-                    {tournamentsPerYear && (
+                    {dynamicTournaments && (
                       <div className="rounded-xl border p-4 text-center" style={{ background: "hsl(var(--chess-blue)/0.04)", borderColor: "hsl(var(--chess-blue)/0.12)" }}>
-                        <p className="text-2xl font-display font-bold" style={{ color: "hsl(var(--chess-blue))" }}>{tournamentsPerYear}</p>
-                        <p className="text-xs text-muted-foreground mt-1">Tournois/an</p>
+                        <p className="text-2xl font-display font-bold" style={{ color: "hsl(var(--chess-blue))" }}>{dynamicTournaments}</p>
+                        <p className="text-xs text-muted-foreground mt-1">Tournois joués</p>
                       </div>
                     )}
                     {teams && (
@@ -236,39 +245,94 @@ const Index = () => {
         </div>
       </section>
 
-      {/* ── AVANTAGES ── */}
-      <section className="py-24 md:py-32 relative overflow-hidden"
-        style={{ background: "linear-gradient(135deg, hsl(var(--chess-blue-dark)), hsl(var(--chess-blue)))" }}>
-        <div className="absolute inset-0 opacity-[0.04] pointer-events-none"
-          style={{ backgroundImage: "radial-gradient(circle at 1.5px 1.5px, white 1px, transparent 0)", backgroundSize: "40px 40px" }} />
-        <div className="container relative">
-          <Reveal>
-            <div className="text-center mb-16">
-              <h2 className="text-4xl font-bold text-white md:text-5xl">Pourquoi nous rejoindre</h2>
-            </div>
-          </Reveal>
-          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
-            {[
-              { icon: Users,    title: "Communauté",  desc: "Joueurs de tous niveaux, du débutant au maître." },
-              { icon: Target,   title: "Progression", desc: "Cours, analyses et coaching pour progresser." },
-              { icon: Trophy,   title: "Compétition", desc: "Tournois internes et championnats toute l'année." },
-              { icon: Calendar, title: "Événements",  desc: "Simultanées, soirées thématiques et rencontres." },
-            ].map((item, i) => (
-              <Reveal key={item.title} delay={i * 80}>
-                <div className="group rounded-2xl p-7 transition-all duration-300 hover:-translate-y-1 border"
-                  style={{ background: "hsl(var(--chess-blue-mid)/0.4)", borderColor: "hsl(var(--chess-gold)/0.15)" }}>
-                  <div className="w-12 h-12 rounded-xl flex items-center justify-center mb-5 transition-all group-hover:scale-110"
-                    style={{ background: "hsl(var(--chess-gold)/0.15)" }}>
-                    <item.icon size={22} style={{ color: "hsl(var(--chess-gold))" }} />
-                  </div>
-                  <h3 className="text-lg font-semibold text-white mb-2">{item.title}</h3>
-                  <p className="text-sm text-white/50 leading-relaxed">{item.desc}</p>
+      {/* ── AVANTAGES / VALEURS ── */}
+      {(() => {
+        const FALLBACK = [
+          { icon: <Users    size={22} style={{ color: "hsl(var(--chess-gold))" }} />, title: "Communauté",  desc: "Joueurs de tous niveaux, du débutant au maître." },
+          { icon: <Target   size={22} style={{ color: "hsl(var(--chess-gold))" }} />, title: "Progression", desc: "Cours, analyses et coaching pour progresser." },
+          { icon: <Trophy   size={22} style={{ color: "hsl(var(--chess-gold))" }} />, title: "Compétition", desc: "Tournois internes et championnats toute l'année." },
+          { icon: <Calendar size={22} style={{ color: "hsl(var(--chess-gold))" }} />, title: "Événements",  desc: "Simultanées, soirées thématiques et rencontres." },
+        ];
+        const CHESS_PIECES = ['♟', '♞', '♝', '♜'];
+        const items = Array.isArray(clubValues) && clubValues.length > 0
+          ? clubValues.map((v, i) => ({
+              icon: <span className="font-display text-2xl leading-none" style={{ color: "hsl(var(--chess-gold))" }}>{CHESS_PIECES[i % 4]}</span>,
+              title: v.title,
+              desc: v.desc,
+            }))
+          : FALLBACK;
+        const cols = items.length <= 3 ? `lg:grid-cols-${items.length}` : 'lg:grid-cols-4';
+        return (
+          <section className="py-24 md:py-32 relative overflow-hidden"
+            style={{ background: "linear-gradient(135deg, hsl(var(--chess-blue-dark)), hsl(var(--chess-blue)))" }}>
+            <div className="absolute inset-0 opacity-[0.04] pointer-events-none"
+              style={{ backgroundImage: "radial-gradient(circle at 1.5px 1.5px, white 1px, transparent 0)", backgroundSize: "40px 40px" }} />
+            <div className="container relative">
+              <Reveal>
+                <div className="text-center mb-16">
+                  <h2 className="text-4xl font-bold text-white md:text-5xl">Pourquoi nous rejoindre</h2>
                 </div>
               </Reveal>
-            ))}
+              <div className={`grid gap-5 sm:grid-cols-2 ${cols}`}>
+                {items.map((item, i) => (
+                  <Reveal key={item.title} delay={i * 80}>
+                    <div className="group rounded-2xl p-7 transition-all duration-300 hover:-translate-y-1 border"
+                      style={{ background: "hsl(var(--chess-blue-mid)/0.4)", borderColor: "hsl(var(--chess-gold)/0.15)" }}>
+                      <div className="w-12 h-12 rounded-xl flex items-center justify-center mb-5 transition-all group-hover:scale-110"
+                        style={{ background: "hsl(var(--chess-gold)/0.15)" }}>
+                        {item.icon}
+                      </div>
+                      <h3 className="text-lg font-semibold text-white mb-2">{item.title}</h3>
+                      <p className="text-sm text-white/50 leading-relaxed">{item.desc}</p>
+                    </div>
+                  </Reveal>
+                ))}
+              </div>
+            </div>
+          </section>
+        );
+      })()}
+
+      {/* ── TÉMOIGNAGES ── */}
+      {Array.isArray(testimonials) && testimonials.length > 0 && (
+        <section className="py-24 md:py-32">
+          <div className="container">
+            <Reveal>
+              <div className="text-center mb-14">
+                <div className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-widest mb-3 px-3 py-1.5 rounded-full"
+                  style={{ background: "hsl(var(--chess-gold)/0.1)", color: "hsl(var(--chess-gold-dark))" }}>
+                  ♟ Ce que disent nos membres
+                </div>
+                <h2 className="text-4xl font-bold md:text-5xl">Ils nous ont rejoint</h2>
+              </div>
+            </Reveal>
+            <div className={`grid gap-6 ${testimonials.length === 1 ? 'max-w-lg mx-auto' : testimonials.length === 2 ? 'sm:grid-cols-2 max-w-2xl mx-auto' : 'sm:grid-cols-2 lg:grid-cols-3'}`}>
+              {testimonials.map((t, i) => {
+                const initials = t.name.split(' ').slice(0, 2).map((w: string) => w[0]).join('').toUpperCase();
+                return (
+                  <Reveal key={i} delay={i * 80}>
+                    <div className="rounded-2xl border bg-card p-6 shadow-sm hover:shadow-md transition-shadow flex flex-col gap-4"
+                      style={{ borderColor: "hsl(var(--chess-silver-light)/0.5)" }}>
+                      <p className="text-3xl leading-none" style={{ color: "hsl(var(--chess-gold)/0.5)" }}>❝</p>
+                      <p className="text-sm leading-relaxed text-foreground/80 flex-1">{t.text}</p>
+                      <div className="flex items-center gap-3 pt-3 border-t" style={{ borderColor: "hsl(var(--chess-silver-light)/0.4)" }}>
+                        <div className="w-10 h-10 rounded-xl flex items-center justify-center text-white text-sm font-bold shrink-0"
+                          style={{ background: "linear-gradient(135deg, hsl(var(--chess-blue-dark)), hsl(var(--chess-blue)))" }}>
+                          {initials}
+                        </div>
+                        <div>
+                          <p className="font-semibold text-sm">{t.name}</p>
+                          {t.role && <p className="text-xs text-muted-foreground">{t.role}</p>}
+                        </div>
+                      </div>
+                    </div>
+                  </Reveal>
+                );
+              })}
+            </div>
           </div>
-        </div>
-      </section>
+        </section>
+      )}
 
       {/* ── GALERIE ── */}
       <section className="py-24 md:py-32">
@@ -382,6 +446,33 @@ const Index = () => {
                 Voir tous les tournois <ArrowRight size={14} />
               </Link>
             </div>
+          </div>
+        </section>
+      )}
+
+      {/* ── SPONSORS ── */}
+      {Array.isArray(sponsors) && sponsors.length > 0 && (
+        <section className="py-12 border-t" style={{ borderColor: "hsl(var(--chess-silver-light)/0.4)" }}>
+          <div className="container">
+            <Reveal>
+              <p className="text-center text-xs font-semibold uppercase tracking-[0.2em] mb-8 text-muted-foreground">
+                Nos partenaires
+              </p>
+              <div className="flex flex-wrap items-center justify-center gap-8 md:gap-12">
+                {sponsors.map((s, i) => (
+                  <a key={i}
+                    href={s.url || '#'}
+                    target={s.url ? '_blank' : undefined}
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-2 opacity-60 hover:opacity-100 transition-opacity grayscale hover:grayscale-0">
+                    {s.logo_url
+                      ? <img src={s.logo_url} alt={s.name} className="h-8 object-contain" />
+                      : <span className="text-sm font-bold tracking-wide">{s.name}</span>
+                    }
+                  </a>
+                ))}
+              </div>
+            </Reveal>
           </div>
         </section>
       )}
