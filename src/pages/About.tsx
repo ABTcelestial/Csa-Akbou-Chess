@@ -5,7 +5,6 @@ import { usePlayers } from "@/hooks/useSupabase";
 import { useState, useMemo } from "react";
 import { Search, User, Trophy, Calendar, Briefcase, Users, Filter, ChevronDown, Star } from "lucide-react";
 import aboutImage from "@/assets/about-chess.jpg";
-import tournamentImage from "@/assets/tournament.jpg";
 
 const About = () => {
   const { get } = useSiteConfig();
