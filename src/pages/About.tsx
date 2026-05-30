@@ -121,45 +121,6 @@ const About = () => {
         </div>
       </section>
 
-      {/* Direction du club */}
-      {dependents.length > 0 && (
-        <section className="py-16 md:py-24 overflow-hidden">
-          <div className="container">
-            <Reveal>
-              <div className="text-center mb-12">
-                <div className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-widest mb-3 px-3 py-1.5 rounded-full"
-                  style={{ background: "hsl(var(--chess-blue)/0.08)", color: "hsl(var(--chess-blue))" }}>
-                  <Users size={12} /> L'équipe dirigeante
-                </div>
-                <h2 className="text-3xl font-bold md:text-4xl">Direction du club</h2>
-              </div>
-            </Reveal>
-            <div className="grid gap-4 grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
-              {dependents.slice(0, 10).map((p, i) => {
-                const initials = `${p.nom?.[0] ?? ''}${p.prenom?.[0] ?? ''}`.toUpperCase();
-                return (
-                  <Reveal key={p.id} delay={i * 50}>
-                    <div className="flex flex-col items-center text-center p-4 rounded-2xl border bg-card shadow-sm hover:shadow-md transition-shadow">
-                      <div className="w-14 h-14 rounded-2xl flex items-center justify-center text-white font-bold text-lg mb-3 shadow-inner"
-                        style={{ background: "linear-gradient(135deg, hsl(var(--chess-blue-dark)), hsl(var(--chess-blue)))" }}>
-                        {initials}
-                      </div>
-                      <p className="font-bold text-sm leading-tight">{p.prenom} {p.nom}</p>
-                      {p.role && (
-                        <span className="mt-1.5 px-2 py-0.5 rounded-md text-[10px] font-semibold uppercase tracking-wide"
-                          style={{ background: "hsl(var(--chess-gold)/0.12)", color: "hsl(var(--chess-gold-dark))" }}>
-                          {p.role}
-                        </span>
-                      )}
-                    </div>
-                  </Reveal>
-                );
-              })}
-            </div>
-          </div>
-        </section>
-      )}
-
       {/* Classement ELO */}
       {eloRanking.length > 0 && (
         <section className="py-16 md:py-24 overflow-hidden">
@@ -311,7 +272,7 @@ const About = () => {
                   ))
                 ) : filteredData.length > 0 ? (
                   filteredData.map((p) => (
-                    <div key={p.id} className="bg-card border rounded-2xl p-5 shadow-sm space-y-4 hover:shadow-md transition-shadow">
+                    <div key={p.id} className="bg-card border rounded-2xl p-5 shadow-sm space-y-4 hover:shadow-md transition-shadow min-w-0">
                       <div className="flex items-center gap-4">
                         <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center text-primary shadow-inner shrink-0">
                           <User size={22} />
@@ -320,8 +281,8 @@ const About = () => {
                           <p className="font-bold text-lg leading-tight truncate">{p.nom} {p.prenom}</p>
                           <div className="flex flex-wrap gap-1.5 mt-1">
                             {activeTab === 'adherents' ? (
-                              <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-primary/10 text-primary border border-primary/20 uppercase tracking-wide">
-                                {p.role}
+                              <span className="px-2 py-0.5 rounded-md text-[10px] font-semibold bg-orange-50 text-orange-700 border border-orange-100 uppercase">
+                                {p.role || '—'}
                               </span>
                             ) : (
                               <>
@@ -338,7 +299,7 @@ const About = () => {
                           </div>
                         </div>
                       </div>
-                      
+
                       <div className="grid grid-cols-2 gap-3 pt-2 border-t">
                         <div className="space-y-1">
                           <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest flex items-center gap-1">

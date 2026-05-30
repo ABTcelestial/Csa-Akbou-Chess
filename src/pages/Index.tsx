@@ -1,7 +1,7 @@
 import Layout from "@/components/Layout";
 import Reveal from "@/components/Reveal";
 import { Link } from "react-router-dom";
-import { Camera, ArrowRight, ChevronRight, Star, Loader2, Users, Target, Trophy, Calendar, MapPin } from "lucide-react";
+import { Camera, ArrowRight, ChevronRight, Loader2, Users, Target, Trophy, Calendar, MapPin } from "lucide-react";
 import { useGallery, useSiteConfig, useTournaments, usePlayers } from "@/hooks/useSupabase";
 import { useMemo } from "react";
 import heroImage from "@/assets/hero-chess.jpg";
@@ -477,32 +477,6 @@ const Index = () => {
         </section>
       )}
 
-      {/* ── CTA ── */}
-      <section className="py-24 relative overflow-hidden"
-        style={{ background: "linear-gradient(135deg, hsl(var(--chess-blue-dark)), hsl(var(--chess-blue)))" }}>
-        <div className="absolute inset-0 opacity-[0.05] pointer-events-none"
-          style={{ backgroundImage: "radial-gradient(circle at 2px 2px, white 1px, transparent 0)", backgroundSize: "32px 32px" }} />
-        <div className="absolute -top-24 -right-24 w-96 h-96 rounded-full opacity-10 pointer-events-none blur-3xl"
-          style={{ background: "hsl(var(--chess-gold))" }} />
-        <div className="container relative text-center">
-          <Reveal>
-            <div className="inline-flex items-center gap-1 mb-6">
-              {[...Array(5)].map((_, i) => <Star key={i} size={16} fill="hsl(var(--chess-gold))" style={{ color: "hsl(var(--chess-gold))" }} />)}
-            </div>
-            <h2 className="text-4xl font-bold text-white md:text-5xl text-balance max-w-2xl mx-auto mb-4">
-              Prêt à faire votre premier coup ?
-            </h2>
-            <p className="text-white/50 max-w-md mx-auto mb-10">
-              Première séance d'essai gratuite. Venez découvrir le club sans engagement.
-            </p>
-            <Link to="/contact"
-              className="inline-flex items-center gap-2 px-8 py-4 rounded-xl font-bold text-white text-lg transition-all hover:brightness-110 active:scale-95 shadow-xl"
-              style={{ background: "linear-gradient(135deg, hsl(var(--chess-gold-dark)), hsl(var(--chess-gold)))", boxShadow: "0 12px 32px -8px hsl(var(--chess-gold)/0.5)" }}>
-              Réserver une séance d'essai <ChevronRight size={18} />
-            </Link>
-          </Reveal>
-        </div>
-      </section>
     </Layout>
   );
 };
