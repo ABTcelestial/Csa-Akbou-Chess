@@ -70,6 +70,7 @@ export interface Player {
   role: string | null
   telephone: string | null
   niveaux: string | null
+  elo: number | null
   display_order: number
   created_at: string
   updated_at: string

@@ -130,6 +130,7 @@ create table gallery (
 );
 
 -- ── players ──────────────────────────────────────────────────────
+-- Migration base existante : ALTER TABLE players ADD COLUMN IF NOT EXISTS elo integer;
 create table players (
   id             uuid primary key default uuid_generate_v4(),
   nom            text not null,
@@ -138,6 +139,9 @@ create table players (
   categorie      text,
   fide_id        text,
   role           text,
+  niveaux        text,
+  telephone      text,
+  elo            integer,
   display_order  int default 0,
   created_at     timestamptz default now(),
   updated_at     timestamptz default now()

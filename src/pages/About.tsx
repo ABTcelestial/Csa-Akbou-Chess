@@ -3,7 +3,7 @@ import Reveal from "@/components/Reveal";
 import { useSiteConfig } from "@/lib/SiteConfigContext";
 import { usePlayers } from "@/hooks/useSupabase";
 import { useState, useMemo } from "react";
-import { Search, User, Trophy, Calendar, Briefcase, Users, Filter, ChevronDown } from "lucide-react";
+import { Search, User, Trophy, Calendar, Briefcase, Users, Filter, ChevronDown, Star } from "lucide-react";
 import aboutImage from "@/assets/about-chess.jpg";
 import tournamentImage from "@/assets/tournament.jpg";
 
@@ -42,6 +42,13 @@ const About = () => {
   [clubAthletes]);
 
   const currentList = activeTab === 'adherents' ? dependents : clubAthletes;
+
+  const eloRanking = useMemo(() =>
+    clubAthletes
+      .filter(p => p.elo != null && p.elo > 0)
+      .sort((a, b) => (b.elo ?? 0) - (a.elo ?? 0))
+      .slice(0, 10),
+  [clubAthletes]);
 
   // Filtrage final
   const filteredData = useMemo(() => {
@@ -149,6 +156,50 @@ const About = () => {
                 );
               })}
             </div>
+          </div>
+        </section>
+      )}
+
+      {/* Classement ELO */}
+      {eloRanking.length > 0 && (
+        <section className="py-16 md:py-24 overflow-hidden">
+          <div className="container max-w-2xl">
+            <Reveal>
+              <div className="text-center mb-10">
+                <div className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-widest mb-3 px-3 py-1.5 rounded-full"
+                  style={{ background: "hsl(var(--chess-gold)/0.1)", color: "hsl(var(--chess-gold-dark))" }}>
+                  <Star size={12} /> Classement interne
+                </div>
+                <h2 className="text-3xl font-bold md:text-4xl">Top joueurs</h2>
+                <p className="mt-2 text-sm text-muted-foreground">Classement basé sur le rating ELO interne du club.</p>
+              </div>
+              <div className="rounded-2xl border bg-card shadow-sm overflow-hidden">
+                {eloRanking.map((p, i) => (
+                  <div key={p.id} className={`flex items-center gap-4 px-5 py-3.5 ${i < eloRanking.length - 1 ? 'border-b' : ''} hover:bg-muted/30 transition-colors`}>
+                    <div className="w-8 text-center shrink-0">
+                      {i === 0 ? <span className="text-xl">🥇</span>
+                        : i === 1 ? <span className="text-xl">🥈</span>
+                        : i === 2 ? <span className="text-xl">🥉</span>
+                        : <span className="text-sm font-bold text-muted-foreground tabular-nums">{i + 1}</span>}
+                    </div>
+                    <div className="w-9 h-9 rounded-xl flex items-center justify-center text-white text-xs font-bold shrink-0"
+                      style={{ background: "linear-gradient(135deg, hsl(var(--chess-blue-dark)), hsl(var(--chess-blue)))" }}>
+                      {`${p.nom?.[0] ?? ''}${p.prenom?.[0] ?? ''}`.toUpperCase()}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-semibold text-sm truncate">{p.prenom} {p.nom}</p>
+                      {(p.categorie || p.niveaux) && (
+                        <p className="text-[11px] text-muted-foreground">{[p.categorie, p.niveaux].filter(Boolean).join(' · ')}</p>
+                      )}
+                    </div>
+                    <div className="shrink-0 text-right">
+                      <p className="font-display font-bold text-lg tabular-nums" style={{ color: "hsl(var(--chess-gold-dark))" }}>{p.elo}</p>
+                      <p className="text-[10px] text-muted-foreground uppercase tracking-wide">ELO</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </Reveal>
           </div>
         </section>
       )}

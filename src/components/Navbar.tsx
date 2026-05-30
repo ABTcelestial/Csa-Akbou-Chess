@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { Menu, X } from "lucide-react";
+import { Menu, X, Moon, Sun } from "lucide-react";
 import { useSiteConfig } from "@/lib/SiteConfigContext";
 import logoClub from "@/assets/logo-club.jpg";
 
@@ -15,10 +15,23 @@ const navLinks = [
 const Navbar = () => {
   const [open, setOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const [isDark, setIsDark] = useState(() => {
+    if (typeof window === "undefined") return false;
+    return (
+      localStorage.getItem("theme") === "dark" ||
+      (!localStorage.getItem("theme") &&
+        window.matchMedia("(prefers-color-scheme: dark)").matches)
+    );
+  });
   const location = useLocation();
   const { get } = useSiteConfig();
-  const clubName = String(get('club_name', ''));
-  const clubSub  = String(get('club_subtitle', ""));
+  const clubName = String(get("club_name", ""));
+  const clubSub  = String(get("club_subtitle", ""));
+
+  useEffect(() => {
+    document.documentElement.classList.toggle("dark", isDark);
+    localStorage.setItem("theme", isDark ? "dark" : "light");
+  }, [isDark]);
 
   useEffect(() => {
     const fn = () => setScrolled(window.scrollY > 30);
@@ -44,10 +57,10 @@ const Navbar = () => {
           <div className="relative w-10 h-10 rounded-xl overflow-hidden shrink-0 shadow-md">
             <img src={logoClub} alt="Logo" className="w-full h-full object-cover" />
           </div>
-            <div className="flex flex-col">
-              <div className="text-sm sm:text-base font-display font-bold text-white leading-tight tracking-tight">{clubName}</div>
-              <div className="text-[8px] sm:text-[9px] text-[hsl(var(--chess-gold-light))] uppercase tracking-[0.18em] font-medium">{clubSub}</div>
-            </div>
+          <div className="flex flex-col">
+            <div className="text-sm sm:text-base font-display font-bold text-white leading-tight tracking-tight">{clubName}</div>
+            <div className="text-[8px] sm:text-[9px] text-[hsl(var(--chess-gold-light))] uppercase tracking-[0.18em] font-medium">{clubSub}</div>
+          </div>
         </Link>
 
         {/* Nav desktop */}
@@ -70,13 +83,23 @@ const Navbar = () => {
           })}
         </nav>
 
+        {/* Actions droite */}
+        <div className="flex items-center gap-1">
+          {/* Toggle dark mode */}
+          <button
+            onClick={() => setIsDark(d => !d)}
+            aria-label={isDark ? "Mode clair" : "Mode sombre"}
+            className="p-2 rounded-lg text-white/60 hover:text-white hover:bg-white/8 transition-colors"
+          >
+            {isDark ? <Sun size={18} /> : <Moon size={18} />}
+          </button>
 
-
-        {/* Burger mobile */}
-        <button onClick={() => setOpen(!open)} aria-label="Menu"
-          className="md:hidden p-2 rounded-lg text-white/70 hover:text-white hover:bg-white/8 transition-colors">
-          {open ? <X size={22} /> : <Menu size={22} />}
-        </button>
+          {/* Burger mobile */}
+          <button onClick={() => setOpen(!open)} aria-label="Menu"
+            className="md:hidden p-2 rounded-lg text-white/70 hover:text-white hover:bg-white/8 transition-colors">
+            {open ? <X size={22} /> : <Menu size={22} />}
+          </button>
+        </div>
       </div>
 
       {/* Mobile menu */}

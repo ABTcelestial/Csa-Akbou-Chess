@@ -57,6 +57,39 @@
     --sidebar-border: 221 48% 28%;
     --sidebar-ring: 30 95% 52%;
   }
+
+  .dark {
+    --background: 222 47% 8%;
+    --foreground: 216 22% 88%;
+
+    --card: 222 44% 11%;
+    --card-foreground: 216 22% 88%;
+
+    --popover: 222 44% 11%;
+    --popover-foreground: 216 22% 88%;
+
+    --primary: 221 60% 65%;
+    --primary-foreground: 222 65% 12%;
+
+    --secondary: 215 18% 30%;
+    --secondary-foreground: 216 22% 85%;
+
+    --muted: 222 40% 14%;
+    --muted-foreground: 218 14% 55%;
+
+    --accent: 30 95% 52%;
+    --accent-foreground: 222 65% 12%;
+
+    --destructive: 0 62% 50%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 222 35% 18%;
+    --input: 222 35% 16%;
+    --ring: 221 60% 60%;
+
+    --chess-silver-bg:  222 47% 8%;
+    --chess-cream-dark: 222 40% 14%;
+  }
 }
 
 @layer base {

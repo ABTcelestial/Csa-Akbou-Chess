@@ -1,8 +1,9 @@
 import Layout from "@/components/Layout";
 import Reveal from "@/components/Reveal";
-import { useState, useMemo } from "react";
-import { Calendar, Clock, Users, MapPin, X, ChevronRight, UserPlus, Building2, Plus, Trash2, CheckCircle, FileImage, Loader2, Search, Trophy, ChevronLeft, Lock } from "lucide-react";
+import { useState, useMemo, useEffect } from "react";
+import { Calendar, Clock, Users, MapPin, X, ChevronRight, UserPlus, Building2, Plus, Trash2, CheckCircle, FileImage, Loader2, Search, Trophy, ChevronLeft, Lock, Link2, Check } from "lucide-react";
 import { useTournaments, submitRegistration } from "@/hooks/useSupabase";
+import { useSearchParams } from "react-router-dom";
 import { Tournament } from "@/lib/supabase";
 import { toast } from "sonner";
 
@@ -55,6 +56,14 @@ const TournamentModal = ({ tournament, onClose, onOpenLightbox }: {
   onOpenLightbox: (photos: string[], index: number) => void;
 }) => {
   const [step, setStep] = useState<"detail" | "form" | "success">("detail");
+  const [linkCopied, setLinkCopied] = useState(false);
+
+  const copyLink = async () => {
+    const url = `${window.location.origin}/tournois?t=${tournament.id}`;
+    await navigator.clipboard.writeText(url);
+    setLinkCopied(true);
+    setTimeout(() => setLinkCopied(false), 2000);
+  };
   const [inscriptionType, setInscriptionType] = useState<"solo" | "club" | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [soloForm, setSoloForm] = useState({ nom: "", prenom: "", fideId: "", club: "", dateNaissance: "" });
@@ -94,7 +103,13 @@ const TournamentModal = ({ tournament, onClose, onOpenLightbox }: {
             <h2 className="text-lg md:text-xl font-bold mt-1.5 leading-tight">{tournament.title}</h2>
             <p className="text-white/60 text-xs md:text-sm mt-1 flex items-center gap-1.5"><Calendar size={12} /> {tournament.date}</p>
           </div>
-          <button onClick={onClose} className="text-white/50 hover:text-white mt-1 shrink-0 p-1"><X size={20} /></button>
+          <div className="flex items-center gap-1 shrink-0 mt-1">
+            <button onClick={copyLink} title="Copier le lien"
+              className="p-1.5 rounded-lg text-white/50 hover:text-white hover:bg-white/10 transition-colors">
+              {linkCopied ? <Check size={16} className="text-green-400" /> : <Link2 size={16} />}
+            </button>
+            <button onClick={onClose} className="text-white/50 hover:text-white p-1.5 rounded-lg hover:bg-white/10 transition-colors"><X size={20} /></button>
+          </div>
         </div>
 
         <div className="overflow-y-auto flex-1 overscroll-contain">
@@ -302,8 +317,29 @@ const Tournaments = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [pastPage, setPastPage] = useState(0);
   const PAST_PER_PAGE = 8;
+  const [searchParams, setSearchParams] = useSearchParams();
 
   const { data: all, loading } = useTournaments();
+
+  // Auto-open tournament from ?t= URL param
+  useEffect(() => {
+    if (loading || all.length === 0) return;
+    const id = searchParams.get("t");
+    if (id && !selected) {
+      const t = all.find(x => x.id === id);
+      if (t) setSelected(t);
+    }
+  }, [all, loading]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const openTournament = (t: Tournament) => {
+    setSelected(t);
+    setSearchParams({ t: t.id }, { replace: true });
+  };
+
+  const closeTournament = () => {
+    setSelected(null);
+    setSearchParams({}, { replace: true });
+  };
 
   const upcoming = all.filter(t => !t.is_past);
   const past     = all.filter(t => t.is_past);
@@ -330,7 +366,7 @@ const Tournaments = () => {
   return (
     <Layout>
       {lightboxData && <Lightbox photos={lightboxData.photos} index={lightboxData.index} onClose={() => setLightboxData(null)} />}
-      {selected && <TournamentModal tournament={selected} onClose={() => setSelected(null)} onOpenLightbox={(photos, index) => setLightboxData({ photos, index })} />}
+      {selected && <TournamentModal tournament={selected} onClose={closeTournament} onOpenLightbox={(photos, index) => setLightboxData({ photos, index })} />}
 
       {/* Hero */}
       <section className="py-16 md:py-24 text-white"
@@ -381,7 +417,7 @@ const Tournaments = () => {
               {filteredUpcoming.map((t, i) => (
                 <Reveal key={t.id} delay={i * 40}>
                   <div className="rounded-2xl border bg-card p-4 md:p-6 shadow-sm hover:shadow-md transition-all cursor-pointer hover:border-primary/30 group active:scale-[0.995]"
-                    onClick={() => setSelected(t)}>
+                    onClick={() => openTournament(t)}>
                     <div className="flex gap-3 md:gap-4">
                       {/* Thumb */}
                       {t.fiches_techniques_urls?.[0] && (
@@ -482,7 +518,7 @@ const Tournaments = () => {
                   {pagedPast.map((t, i) => (
                     <Reveal key={t.id} delay={i * 50}>
                       <div className="rounded-2xl border bg-card shadow-sm overflow-hidden hover:shadow-md transition-all cursor-pointer group hover:border-primary/30 active:scale-[0.98]"
-                        onClick={() => setSelected(t)}>
+                        onClick={() => openTournament(t)}>
                         <div className="relative overflow-hidden" style={{ height: "clamp(120px, 25vw, 160px)" }}>
                           {t.fiches_techniques_urls?.[0] ? (
                             <img src={t.fiches_techniques_urls[0]} alt={t.title} className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105" />
