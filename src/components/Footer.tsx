@@ -113,11 +113,11 @@ const Footer = () => {
             <h4 className="text-xs font-semibold uppercase tracking-[0.15em] mb-5" style={{ color: "hsl(var(--chess-gold))" }}>Contact</h4>
             <div className="space-y-3">
               {[
-                { icon: MapPin, text: address },
-                { icon: Mail,   text: email },
-                { icon: Phone,  text: phone },
+                { id: 'address', icon: MapPin, text: address },
+                { id: 'email',   icon: Mail,   text: email },
+                { id: 'phone',   icon: Phone,  text: phone },
               ].map((item) => (
-                <div key={item.text} className="flex items-start gap-3">
+                <div key={item.id} className="flex items-start gap-3">
                   <div className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0 mt-0.5"
                     style={{ background: "hsl(var(--chess-gold)/0.12)" }}>
                     <item.icon size={13} style={{ color: "hsl(var(--chess-gold))" }} />
