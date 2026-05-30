@@ -1,14 +1,29 @@
 import Layout from "@/components/Layout";
 import Reveal from "@/components/Reveal";
 import { Link } from "react-router-dom";
-import { Camera, ArrowRight, ChevronRight, Star, Loader2, Users, Target, Trophy, Calendar } from "lucide-react";
-import { useGallery, useSiteConfig } from "@/hooks/useSupabase";
+import { Camera, ArrowRight, ChevronRight, Star, Loader2, Users, Target, Trophy, Calendar, MapPin } from "lucide-react";
+import { useGallery, useSiteConfig, useTournaments } from "@/hooks/useSupabase";
+import { useMemo } from "react";
 import heroImage from "@/assets/hero-chess.jpg";
 import tournamentImage from "@/assets/tournament.jpg";
 
 const Index = () => {
   const { data: gallery, loading: galleryLoading } = useGallery();
+  const { data: tournaments } = useTournaments();
   const { get } = useSiteConfig();
+
+  const nextTournament = useMemo(() =>
+    tournaments
+      .filter(t => !t.is_past)
+      .sort((a, b) => (a.date_iso || a.date).localeCompare(b.date_iso || b.date))[0] ?? null,
+  [tournaments]);
+
+  const recentResults = useMemo(() =>
+    tournaments
+      .filter(t => t.is_past && t.extra_places && t.extra_places.length > 0)
+      .sort((a, b) => (b.date_iso || b.date).localeCompare(a.date_iso || a.date))
+      .slice(0, 3),
+  [tournaments]);
 
   // ── Config depuis Supabase — fallbacks vides ou neutres ────────
   const clubName           = String(get('club_name',                ''));
@@ -110,6 +125,46 @@ const Index = () => {
         <div className="absolute bottom-0 left-0 right-0 h-16 pointer-events-none"
           style={{ background: "linear-gradient(to bottom, transparent, hsl(var(--background)))" }} />
       </section>
+
+      {/* ── PROCHAIN TOURNOI ── */}
+      {nextTournament && (
+        <section className="py-10 md:py-12 border-b" style={{ background: "hsl(var(--chess-gold)/0.04)", borderColor: "hsl(var(--chess-gold)/0.15)" }}>
+          <div className="container">
+            <Reveal>
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-5 rounded-2xl border p-5 md:p-7 shadow-sm"
+                style={{ background: "hsl(var(--background))", borderColor: "hsl(var(--chess-gold)/0.3)" }}>
+                <div className="flex items-center gap-4">
+                  <div className="w-14 h-14 rounded-2xl flex items-center justify-center shrink-0"
+                    style={{ background: "linear-gradient(135deg, hsl(var(--chess-gold-dark)), hsl(var(--chess-gold)))" }}>
+                    <Trophy size={24} className="text-white" />
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-bold uppercase tracking-[0.2em] mb-1" style={{ color: "hsl(var(--chess-gold-dark))" }}>
+                      Prochain tournoi
+                    </p>
+                    <h3 className="text-lg font-bold leading-tight">{nextTournament.title}</h3>
+                    <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1.5 text-sm text-muted-foreground">
+                      <span className="flex items-center gap-1"><Calendar size={12} /> {nextTournament.date}</span>
+                      {nextTournament.location && <span className="flex items-center gap-1"><MapPin size={12} /> {nextTournament.location}</span>}
+                      {nextTournament.type && (
+                        <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide border"
+                          style={{ background: "hsl(var(--chess-blue)/0.07)", color: "hsl(var(--chess-blue))", borderColor: "hsl(var(--chess-blue)/0.18)" }}>
+                          {nextTournament.type}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+                <Link to="/tournois"
+                  className="shrink-0 inline-flex items-center gap-2 px-5 py-2.5 rounded-xl font-semibold text-white text-sm transition-all hover:brightness-110 active:scale-95"
+                  style={{ background: "linear-gradient(135deg, hsl(var(--chess-gold-dark)), hsl(var(--chess-gold)))" }}>
+                  {nextTournament.registrations_closed ? 'Voir le tournoi' : "S'inscrire"} <ChevronRight size={14} />
+                </Link>
+              </div>
+            </Reveal>
+          </div>
+        </section>
+      )}
 
       {/* ── PRÉSENTATION ── */}
       <section className="py-24 md:py-32">
@@ -271,6 +326,65 @@ const Index = () => {
           </div>
         </div>
       </section>
+
+      {/* ── PALMARÈS RÉCENTS ── */}
+      {recentResults.length > 0 && (
+        <section className="py-24 md:py-32 bg-muted/30">
+          <div className="container">
+            <Reveal>
+              <div className="text-center mb-14">
+                <div className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-widest mb-3 px-3 py-1.5 rounded-full"
+                  style={{ background: "hsl(var(--chess-gold)/0.1)", color: "hsl(var(--chess-gold-dark))" }}>
+                  <Trophy size={12} /> Nos champions
+                </div>
+                <h2 className="text-4xl font-bold md:text-5xl">Derniers palmarès</h2>
+                <p className="mt-3 text-muted-foreground max-w-md mx-auto text-sm">Les performances récentes de nos compétiteurs.</p>
+              </div>
+            </Reveal>
+            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+              {recentResults.map((t, i) => (
+                <Reveal key={t.id} delay={i * 80}>
+                  <div className="rounded-2xl border bg-card shadow-sm overflow-hidden hover:shadow-md transition-shadow flex flex-col">
+                    {t.fiches_techniques_urls?.[0] ? (
+                      <div className="h-36 overflow-hidden shrink-0">
+                        <img src={t.fiches_techniques_urls[0]} alt={t.title} className="w-full h-full object-cover" />
+                      </div>
+                    ) : (
+                      <div className="h-20 shrink-0 flex items-center justify-center"
+                        style={{ background: "linear-gradient(135deg, hsl(var(--chess-blue-dark)), hsl(var(--chess-blue)))" }}>
+                        <Trophy size={28} className="text-white/30" />
+                      </div>
+                    )}
+                    <div className="p-5 flex flex-col flex-1">
+                      <p className="text-xs text-muted-foreground mb-1">{t.date}</p>
+                      <h3 className="font-bold text-base mb-4 line-clamp-2 leading-snug">{t.title}</h3>
+                      <div className="space-y-2.5 mt-auto">
+                        {t.extra_places!.slice(0, 3).map((p) => (
+                          <div key={p.rank} className="flex items-center gap-3">
+                            <span className="text-xl w-7 text-center shrink-0 leading-none">
+                              {p.rank === 1 ? '🥇' : p.rank === 2 ? '🥈' : '🥉'}
+                            </span>
+                            <div className="min-w-0">
+                              <p className="text-sm font-semibold truncate leading-tight">{p.name}</p>
+                              {p.category && <p className="text-[11px] text-muted-foreground">{p.category}</p>}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </Reveal>
+              ))}
+            </div>
+            <div className="mt-10 text-center">
+              <Link to="/tournois" className="inline-flex items-center gap-2 text-sm font-semibold transition-all hover:gap-3"
+                style={{ color: "hsl(var(--chess-blue))" }}>
+                Voir tous les tournois <ArrowRight size={14} />
+              </Link>
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* ── CTA ── */}
       <section className="py-24 relative overflow-hidden"

@@ -1,6 +1,6 @@
 import Layout from "@/components/Layout";
 import Reveal from "@/components/Reveal";
-import { MapPin, Mail, Phone, Clock, ExternalLink } from "lucide-react";
+import { MapPin, Mail, Phone, Clock, ExternalLink, Navigation } from "lucide-react";
 import { useSiteConfig } from "@/lib/SiteConfigContext";
 
 // Icônes SVG inline pour les réseaux — lucide n'a pas Facebook/WhatsApp
@@ -35,10 +35,24 @@ const SOCIAL_CONFIG = [
 const Contact = () => {
   const { get } = useSiteConfig();
 
-  const address  = String(get('club_address', ''));
-  const email    = String(get('club_email',   ''));
-  const phone    = String(get('club_phone',   ''));
-  const schedule = (get('schedule', []) as { day: string; hours: string }[]);
+  const address   = String(get('club_address',      ''));
+  const email     = String(get('club_email',        ''));
+  const phone     = String(get('club_phone',        ''));
+  const schedule  = (get('schedule', []) as { day: string; hours: string }[]);
+  const whatsappRaw = String(get('social_whatsapp', ''));
+
+  const mapUrl = address
+    ? `https://maps.google.com/maps?q=${encodeURIComponent(address)}&output=embed&hl=fr`
+    : null;
+
+  let whatsappCta: string | null = null;
+  if (whatsappRaw && whatsappRaw !== 'null' && whatsappRaw !== '') {
+    const base = whatsappRaw.startsWith('http')
+      ? whatsappRaw
+      : `https://wa.me/${whatsappRaw.replace(/\D/g, '')}`;
+    const sep = base.includes('?') ? '&' : '?';
+    whatsappCta = base + sep + 'text=' + encodeURIComponent('Bonjour, je souhaite rejoindre le CSA Akbou Chess !');
+  }
 
   // Réseaux sociaux
   const socials = SOCIAL_CONFIG.map(s => ({
@@ -114,6 +128,28 @@ const Contact = () => {
             </div>
           </Reveal>
 
+          {/* CTA WhatsApp */}
+          {whatsappCta && (
+            <Reveal>
+              <a
+                href={whatsappCta}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-4 rounded-2xl p-5 transition-all hover:scale-[1.01] active:scale-[0.99]"
+                style={{ background: "linear-gradient(135deg, #128C7E, #25D366)", boxShadow: "0 8px 24px -4px rgba(37,211,102,0.35)" }}
+              >
+                <div className="w-12 h-12 rounded-xl bg-white/20 flex items-center justify-center shrink-0">
+                  <WhatsAppIcon />
+                </div>
+                <div className="text-white">
+                  <p className="font-bold text-base">Rejoindre le club sur WhatsApp</p>
+                  <p className="text-white/70 text-sm mt-0.5">Message envoyé automatiquement — réponse rapide garantie</p>
+                </div>
+                <ExternalLink size={16} className="text-white/60 ml-auto shrink-0" />
+              </a>
+            </Reveal>
+          )}
+
           {/* Réseaux sociaux */}
           {socials.length > 0 && (
             <Reveal>
@@ -144,6 +180,40 @@ const Contact = () => {
           )}
         </div>
       </section>
+
+      {/* Carte */}
+      {mapUrl && (
+        <section className="pb-16 md:pb-24">
+          <div className="container max-w-2xl">
+            <Reveal>
+              <div className="rounded-2xl overflow-hidden border shadow-sm" style={{ borderColor: "hsl(var(--chess-silver-light)/0.5)" }}>
+                <iframe
+                  src={mapUrl}
+                  width="100%"
+                  height="320"
+                  style={{ border: 0, display: 'block' }}
+                  allowFullScreen
+                  loading="lazy"
+                  referrerPolicy="no-referrer-when-downgrade"
+                  title="Localisation du club"
+                />
+                <div className="flex items-center justify-between px-4 py-3 bg-card border-t" style={{ borderColor: "hsl(var(--chess-silver-light)/0.4)" }}>
+                  <p className="text-sm text-muted-foreground truncate">{address}</p>
+                  <a
+                    href={`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(address)}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-1.5 text-xs font-semibold shrink-0 ml-3 px-3 py-1.5 rounded-lg transition-all hover:brightness-110"
+                    style={{ background: "hsl(var(--chess-blue)/0.08)", color: "hsl(var(--chess-blue))" }}
+                  >
+                    <Navigation size={12} /> Itinéraire
+                  </a>
+                </div>
+              </div>
+            </Reveal>
+          </div>
+        </section>
+      )}
     </Layout>
   );
 };
