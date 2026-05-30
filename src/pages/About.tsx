@@ -77,7 +77,7 @@ const About = () => {
       </section>
 
       {/* Story */}
-      <section className="py-24 md:py-32">
+      <section className="py-24 md:py-32 overflow-hidden">
         <div className="container">
           <div className="grid items-center gap-16 lg:grid-cols-2 lg:gap-24">
             <Reveal direction="left">
@@ -115,7 +115,7 @@ const About = () => {
       </section>
 
       {/* Members & Athletes Section */}
-      <section className="py-24 md:py-32 bg-muted/30">
+      <section className="py-24 md:py-32 bg-muted/30 overflow-hidden">
         <div className="container">
           <Reveal>
             <div className="text-center max-w-3xl mx-auto mb-16">
@@ -274,7 +274,7 @@ const About = () => {
               </div>
 
               {/* Desktop View: Table */}
-              <div className="hidden md:block bg-card rounded-3xl border shadow-2xl overflow-hidden">
+              <div className="hidden md:block bg-card rounded-3xl border shadow-2xl overflow-x-auto">
                 <div className="overflow-x-auto">
                   <table className="w-full text-left border-collapse min-w-[800px]">
                     <thead>

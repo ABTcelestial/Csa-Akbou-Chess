@@ -8,6 +8,12 @@ export function useScrollReveal(threshold = 0.2) {
     const el = ref.current;
     if (!el) return;
 
+    // Already in viewport on mount → show immediately, no flash
+    if (el.getBoundingClientRect().top < window.innerHeight) {
+      setIsVisible(true);
+      return;
+    }
+
     const observer = new IntersectionObserver(
       ([entry]) => {
         if (entry.isIntersecting) {
