@@ -2,4 +2,4 @@ User-agent: *
 Allow: /
 Disallow: /admin
 
-Sitemap: https://csa-akbou-chess.vercel.app/sitemap.xml
+Sitemap: https://csa-akbou-chess.com/sitemap.xml
