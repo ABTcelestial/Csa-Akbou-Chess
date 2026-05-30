@@ -1,7 +1,7 @@
 import Layout from "@/components/Layout";
 import Reveal from "@/components/Reveal";
 import { useState, useMemo } from "react";
-import { HelpCircle, ChevronDown, X, Loader2, Search, Calendar, User } from "lucide-react";
+import { HelpCircle, ChevronDown, X, Loader2, Search, Calendar, User, Share2, Check } from "lucide-react";
 import { usePosts, useSiteConfig } from "@/hooks/useSupabase";
 import { Post } from "@/lib/supabase";
 import logoClub from "@/assets/logo-club.jpg";
@@ -91,6 +91,19 @@ const PhotoGrid = ({ photos, onOpen }: { photos: string[]; onOpen: (i: number) =
 // ── PostCard ──────────────────────────────────────────────────────
 const PostCard = ({ post, onOpenLightbox }: { post: Post; onOpenLightbox: (photos: string[], index: number) => void }) => {
   const [expanded, setExpanded] = useState(false);
+  const [copied, setCopied] = useState(false);
+
+  const handleShare = async () => {
+    const url = `${window.location.origin}/realisations`;
+    const text = post.title || post.content.slice(0, 100);
+    if (navigator.share) {
+      try { await navigator.share({ title: text, url }); } catch { /* user cancelled */ }
+    } else {
+      await navigator.clipboard.writeText(url);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
+  };
   const lines = post.content.split("\n");
   const isLong = lines.length > 6 || post.content.length > 400;
 
@@ -171,6 +184,15 @@ const PostCard = ({ post, onOpenLightbox }: { post: Post; onOpenLightbox: (photo
           onOpen={(i) => onOpenLightbox(post.images_urls || [], i)}
         />
       )}
+
+      {/* ── Actions ── */}
+      <div className="flex items-center justify-end px-5 py-2.5 border-t">
+        <button onClick={handleShare}
+          className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors py-1 px-2 rounded-lg hover:bg-muted/50">
+          {copied ? <Check size={13} className="text-green-600" /> : <Share2 size={13} />}
+          {copied ? 'Lien copié !' : 'Partager'}
+        </button>
+      </div>
     </article>
   );
 };
@@ -202,6 +224,7 @@ const Achievements = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [activeType, setActiveType]   = useState<string>("all");
   const [dateFilter, setDateFilter]   = useState<string>("all");
+  const [yearFilter, setYearFilter]   = useState<number | null>(null);
   const [lightbox, setLightbox]       = useState<{ photos: string[]; index: number } | null>(null);
   const { data: posts, loading }      = usePosts();
   const { get }                       = useSiteConfig();
@@ -209,26 +232,34 @@ const Achievements = () => {
   const faqs        = get('faq', []) as { q: string; a: string }[];
   const customTypes = get('post_types', []) as { label: string; color: string }[];
 
-  // Construire la liste des mois disponibles depuis les posts
+  const availableYears = useMemo(() => {
+    const years = new Set(posts.map(p => new Date(p.custom_date || p.created_at).getFullYear()));
+    return Array.from(years).sort((a, b) => b - a);
+  }, [posts]);
+
+  // Construire la liste des mois disponibles (filtrée par année si sélectionnée)
   const availableMonths = useMemo(() => {
     const seen = new Set<string>();
     posts.forEach(p => {
       const d = new Date(p.custom_date || p.created_at);
+      if (yearFilter !== null && d.getFullYear() !== yearFilter) return;
       const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
       seen.add(key);
     });
-    return Array.from(seen).sort((a, b) => b.localeCompare(a)); // desc
-  }, [posts]);
+    return Array.from(seen).sort((a, b) => b.localeCompare(a));
+  }, [posts, yearFilter]);
 
   const filtered = useMemo(() => {
     let result = posts;
 
-    // Filtre par type
     if (activeType !== "all") {
       result = result.filter(p => p.type === activeType || p.tag === activeType);
     }
 
-    // Filtre par mois
+    if (yearFilter !== null) {
+      result = result.filter(p => new Date(p.custom_date || p.created_at).getFullYear() === yearFilter);
+    }
+
     if (dateFilter !== "all") {
       result = result.filter(p => {
         const d = new Date(p.custom_date || p.created_at);
@@ -237,7 +268,6 @@ const Achievements = () => {
       });
     }
 
-    // Filtre par texte
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
       result = result.filter(p =>
@@ -249,7 +279,7 @@ const Achievements = () => {
     }
 
     return result;
-  }, [posts, activeType, dateFilter, searchQuery]);
+  }, [posts, activeType, yearFilter, dateFilter, searchQuery]);
 
   const clubName    = String(get('club_name', ''));
   const clubDesc    = String(get('club_description', ''));
@@ -257,7 +287,7 @@ const Achievements = () => {
   const clubFounded = String(get('club_founded', ''));
   const clubMembers = String(get('club_members', ''));
 
-  const hasFilters = activeType !== "all" || dateFilter !== "all" || searchQuery.trim() !== "";
+  const hasFilters = activeType !== "all" || yearFilter !== null || dateFilter !== "all" || searchQuery.trim() !== "";
 
   return (
     <Layout>
@@ -398,6 +428,22 @@ const Achievements = () => {
                   </div>
                 )}
 
+                {/* Filtre par année */}
+                {availableYears.length > 1 && (
+                  <div className="flex items-center gap-2 flex-wrap">
+                    {availableYears.map(y => (
+                      <button key={y}
+                        onClick={() => { setYearFilter(yearFilter === y ? null : y); setDateFilter("all"); }}
+                        className="px-3 py-1.5 rounded-xl text-xs font-semibold border transition-all"
+                        style={yearFilter === y
+                          ? { background: "hsl(var(--chess-blue))", color: "white", borderColor: "hsl(var(--chess-blue))" }
+                          : { background: "transparent", color: "hsl(var(--muted-foreground))", borderColor: "hsl(var(--border))" }}>
+                        {y}
+                      </button>
+                    ))}
+                  </div>
+                )}
+
                 {/* Filtre par mois */}
                 {availableMonths.length > 1 && (
                   <div className="flex items-center gap-2">
@@ -406,10 +452,10 @@ const Achievements = () => {
                       onChange={e => setDateFilter(e.target.value)}
                       className="flex-1 text-sm border rounded-xl px-3 py-2.5 bg-background focus:outline-none focus:ring-2 focus:ring-primary/20 cursor-pointer"
                     >
-                      <option value="all">Toutes les dates</option>
+                      <option value="all">{yearFilter ? `Tous les mois de ${yearFilter}` : 'Toutes les dates'}</option>
                       {availableMonths.map(m => {
                         const [year, month] = m.split('-');
-                        const label = new Date(Number(year), Number(month) - 1).toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
+                        const label = new Date(Number(year), Number(month) - 1).toLocaleDateString('fr-FR', { month: 'long', year: yearFilter ? undefined : 'numeric' });
                         return <option key={m} value={m}>{label.charAt(0).toUpperCase() + label.slice(1)}</option>;
                       })}
                     </select>
@@ -449,7 +495,7 @@ const Achievements = () => {
                       {searchQuery && ` · "${searchQuery}"`}
                     </p>
                     <button
-                      onClick={() => { setSearchQuery(""); setActiveType("all"); setDateFilter("all"); }}
+                      onClick={() => { setSearchQuery(""); setActiveType("all"); setDateFilter("all"); setYearFilter(null); }}
                       className="text-xs underline text-muted-foreground hover:text-foreground transition-colors">
                       Tout afficher
                     </button>

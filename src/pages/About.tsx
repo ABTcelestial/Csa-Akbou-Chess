@@ -114,6 +114,45 @@ const About = () => {
         </div>
       </section>
 
+      {/* Direction du club */}
+      {dependents.length > 0 && (
+        <section className="py-16 md:py-24 overflow-hidden">
+          <div className="container">
+            <Reveal>
+              <div className="text-center mb-12">
+                <div className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-widest mb-3 px-3 py-1.5 rounded-full"
+                  style={{ background: "hsl(var(--chess-blue)/0.08)", color: "hsl(var(--chess-blue))" }}>
+                  <Users size={12} /> L'équipe dirigeante
+                </div>
+                <h2 className="text-3xl font-bold md:text-4xl">Direction du club</h2>
+              </div>
+            </Reveal>
+            <div className="grid gap-4 grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
+              {dependents.slice(0, 10).map((p, i) => {
+                const initials = `${p.nom?.[0] ?? ''}${p.prenom?.[0] ?? ''}`.toUpperCase();
+                return (
+                  <Reveal key={p.id} delay={i * 50}>
+                    <div className="flex flex-col items-center text-center p-4 rounded-2xl border bg-card shadow-sm hover:shadow-md transition-shadow">
+                      <div className="w-14 h-14 rounded-2xl flex items-center justify-center text-white font-bold text-lg mb-3 shadow-inner"
+                        style={{ background: "linear-gradient(135deg, hsl(var(--chess-blue-dark)), hsl(var(--chess-blue)))" }}>
+                        {initials}
+                      </div>
+                      <p className="font-bold text-sm leading-tight">{p.prenom} {p.nom}</p>
+                      {p.role && (
+                        <span className="mt-1.5 px-2 py-0.5 rounded-md text-[10px] font-semibold uppercase tracking-wide"
+                          style={{ background: "hsl(var(--chess-gold)/0.12)", color: "hsl(var(--chess-gold-dark))" }}>
+                          {p.role}
+                        </span>
+                      )}
+                    </div>
+                  </Reveal>
+                );
+              })}
+            </div>
+          </div>
+        </section>
+      )}
+
       {/* Members & Athletes Section */}
       <section className="py-24 md:py-32 bg-muted/30 overflow-hidden">
         <div className="container">

@@ -1,6 +1,8 @@
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { useSiteConfig } from "@/lib/SiteConfigContext";
+import { useEffect, useState } from "react";
+import { ChevronUp } from "lucide-react";
 
 const WhatsAppFloatIcon = () => (
   <svg viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5 shrink-0">
@@ -16,6 +18,13 @@ const Layout = ({ children }: LayoutProps) => {
   const { get } = useSiteConfig();
   const whatsappRaw = String(get('social_whatsapp', ''));
 
+  const [showTop, setShowTop] = useState(false);
+  useEffect(() => {
+    const onScroll = () => setShowTop(window.scrollY > 400);
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
+
   let whatsappHref: string | null = null;
   if (whatsappRaw && whatsappRaw !== 'null' && whatsappRaw !== '') {
     const base = whatsappRaw.startsWith('http')
@@ -28,7 +37,7 @@ const Layout = ({ children }: LayoutProps) => {
   return (
     <div className="flex min-h-screen flex-col">
       <Navbar />
-      <main className="flex-1 pt-16 md:pt-20">{children}</main>
+      <main className="flex-1 pt-16 md:pt-20 animate-in fade-in duration-200">{children}</main>
       <Footer />
       {whatsappHref && (
         <a
@@ -42,6 +51,21 @@ const Layout = ({ children }: LayoutProps) => {
           <WhatsAppFloatIcon />
           <span className="hidden sm:inline">Rejoindre le club</span>
         </a>
+      )}
+      {showTop && (
+        <button
+          onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+          aria-label="Retour en haut"
+          className="fixed z-50 flex items-center justify-center w-10 h-10 rounded-full text-white transition-all hover:scale-110 active:scale-95"
+          style={{
+            bottom: whatsappHref ? '5.5rem' : '1.5rem',
+            right: '1.5rem',
+            background: "hsl(var(--chess-blue))",
+            boxShadow: "0 4px 16px -4px hsl(var(--chess-blue)/0.5)",
+          }}
+        >
+          <ChevronUp size={18} />
+        </button>
       )}
     </div>
   );

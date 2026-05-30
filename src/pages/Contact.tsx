@@ -1,7 +1,8 @@
 import Layout from "@/components/Layout";
 import Reveal from "@/components/Reveal";
-import { MapPin, Mail, Phone, Clock, ExternalLink, Navigation } from "lucide-react";
+import { MapPin, Mail, Phone, Clock, ExternalLink, Navigation, Send, CheckCircle } from "lucide-react";
 import { useSiteConfig } from "@/lib/SiteConfigContext";
+import { useState } from "react";
 
 // Icônes SVG inline pour les réseaux — lucide n'a pas Facebook/WhatsApp
 const FacebookIcon = () => (
@@ -34,6 +35,8 @@ const SOCIAL_CONFIG = [
 
 const Contact = () => {
   const { get } = useSiteConfig();
+  const [form, setForm] = useState({ nom: '', email: '', message: '' });
+  const [sent, setSent] = useState(false);
 
   const address   = String(get('club_address',      ''));
   const email     = String(get('club_email',        ''));
@@ -53,6 +56,17 @@ const Contact = () => {
     const sep = base.includes('?') ? '&' : '?';
     whatsappCta = base + sep + 'text=' + encodeURIComponent('Bonjour, je souhaite rejoindre le CSA Akbou Chess !');
   }
+
+  const handleFormSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const subject = encodeURIComponent(`Message de ${form.nom} via le site CSA Akbou Chess`);
+    const body = encodeURIComponent(`Nom : ${form.nom}\nEmail : ${form.email}\n\n${form.message}`);
+    window.location.href = `mailto:${email}?subject=${subject}&body=${body}`;
+    setSent(true);
+    setTimeout(() => { setSent(false); setForm({ nom: '', email: '', message: '' }); }, 4000);
+  };
+
+  const inputCls = "w-full border rounded-xl px-3.5 py-3 text-sm bg-background focus:outline-none focus:ring-2 focus:ring-primary/20 transition-shadow";
 
   // Réseaux sociaux
   const socials = SOCIAL_CONFIG.map(s => ({
@@ -127,6 +141,52 @@ const Contact = () => {
               ))}
             </div>
           </Reveal>
+
+          {/* Formulaire de contact */}
+          {email && (
+            <Reveal>
+              <div className="rounded-2xl border bg-card p-6 shadow-sm" style={{ borderColor: "hsl(var(--chess-silver-light)/0.5)" }}>
+                <h2 className="font-bold text-base mb-5 flex items-center gap-2">
+                  <Send size={16} style={{ color: "hsl(var(--chess-gold))" }} />
+                  Envoyer un message
+                </h2>
+                {sent ? (
+                  <div className="flex flex-col items-center gap-3 py-6 text-center">
+                    <CheckCircle size={36} className="text-green-500" />
+                    <p className="font-semibold">Votre messagerie s'est ouverte !</p>
+                    <p className="text-sm text-muted-foreground">Envoyez l'email pré-rempli pour nous contacter.</p>
+                  </div>
+                ) : (
+                  <form onSubmit={handleFormSubmit} className="space-y-3">
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="text-xs font-medium mb-1.5 block">Votre nom *</label>
+                        <input required className={inputCls} value={form.nom}
+                          onChange={e => setForm(f => ({ ...f, nom: e.target.value }))} placeholder="Prénom Nom" />
+                      </div>
+                      <div>
+                        <label className="text-xs font-medium mb-1.5 block">Votre email *</label>
+                        <input required type="email" className={inputCls} value={form.email}
+                          onChange={e => setForm(f => ({ ...f, email: e.target.value }))} placeholder="vous@exemple.com" />
+                      </div>
+                    </div>
+                    <div>
+                      <label className="text-xs font-medium mb-1.5 block">Message *</label>
+                      <textarea required rows={4} className={inputCls + " resize-none"} value={form.message}
+                        onChange={e => setForm(f => ({ ...f, message: e.target.value }))}
+                        placeholder="Votre message…" />
+                    </div>
+                    <button type="submit"
+                      className="w-full flex items-center justify-center gap-2 py-3 rounded-xl font-semibold text-sm text-white transition-all hover:brightness-110 active:scale-[0.98]"
+                      style={{ background: "linear-gradient(135deg, hsl(var(--chess-blue-dark)), hsl(var(--chess-blue)))" }}>
+                      <Send size={14} /> Envoyer le message
+                    </button>
+                    <p className="text-[10px] text-center text-muted-foreground">Ouvre votre appli email avec le message pré-rempli.</p>
+                  </form>
+                )}
+              </div>
+            </Reveal>
+          )}
 
           {/* CTA WhatsApp */}
           {whatsappCta && (
