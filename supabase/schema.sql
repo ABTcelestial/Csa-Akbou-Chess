@@ -182,13 +182,17 @@ create policy "auth write gallery"             on gallery       for all using (a
 create policy "auth write players"             on players       for all using (auth.role() = 'authenticated');
 
 -- ── Fonction publique : compte d'inscrits pour un tournoi ─────────
--- SECURITY DEFINER pour contourner RLS et retourner uniquement le compte
--- sans exposer les données personnelles des inscrits.
+-- Compte les solo (1 chacun) + chaque joueur dans les inscriptions clubs.
+-- SECURITY DEFINER pour contourner RLS sans exposer les données personnelles.
 create or replace function public.get_registration_count(p_tournament_id uuid)
 returns bigint
 language sql
 security definer
 as $$
-  select count(*) from registrations where tournament_id = p_tournament_id;
+  select
+    count(*) filter (where type = 'solo') +
+    coalesce(sum(jsonb_array_length(joueurs)) filter (where type = 'club'), 0)
+  from registrations
+  where tournament_id = p_tournament_id;
 $$;
 grant execute on function public.get_registration_count(uuid) to anon, authenticated;

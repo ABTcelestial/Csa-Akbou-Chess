@@ -388,8 +388,10 @@ export function useRegistrations(tournamentId?: string) {
   useEffect(() => { fetch() }, [fetch])
 
   const remove = async (id: string) => {
-    const { error } = await supabase.from('registrations').delete().eq('id', id)
+    const { error, count } = await supabase
+      .from('registrations').delete({ count: 'exact' }).eq('id', id)
     if (error) throw error
+    if (count === 0) throw new Error('Suppression refusée (permissions insuffisantes)')
     setData(prev => prev.filter(x => x.id !== id))
   }
 
