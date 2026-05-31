@@ -1,8 +1,9 @@
 import Layout from "@/components/Layout";
 import Reveal from "@/components/Reveal";
+import ConfirmationCard from "@/components/ConfirmationCard";
 import { useState, useMemo, useEffect } from "react";
-import { Calendar, Clock, Users, MapPin, X, ChevronRight, UserPlus, Building2, Plus, Trash2, CheckCircle, FileImage, Loader2, Search, Trophy, ChevronLeft, Lock, Link2, Check } from "lucide-react";
-import { useTournaments, submitRegistration } from "@/hooks/useSupabase";
+import { Calendar, Clock, Users, MapPin, X, ChevronRight, UserPlus, Building2, Plus, Trash2, CheckCircle, FileImage, Loader2, Search, Trophy, ChevronLeft, Lock, Link2, Check, Download, Mail } from "lucide-react";
+import { useTournaments, submitRegistration, Registration } from "@/hooks/useSupabase";
 import { useSearchParams } from "react-router-dom";
 import { supabase, Tournament } from "@/lib/supabase";
 import { toast } from "sonner";
@@ -84,9 +85,13 @@ const TournamentModal = ({ tournament, onClose, onOpenLightbox }: {
   };
   const [inscriptionType, setInscriptionType] = useState<"solo" | "club" | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [email, setEmail] = useState("");
   const [soloForm, setSoloForm] = useState({ nom: "", prenom: "", fideId: "", club: "", dateNaissance: "" });
   const [clubForm, setClubForm] = useState({ nomClub: "", responsable: "", telephone: "" });
   const [joueurs, setJoueurs] = useState([{ nom: "", prenom: "", fideId: "", dateNaissance: "" }]);
+  const [savedRegistration, setSavedRegistration] = useState<Registration | null>(null);
+  const [emailSent, setEmailSent] = useState(false);
+  const [downloading, setDownloading] = useState(false);
 
   const addJoueur = () => setJoueurs([...joueurs, { nom: "", prenom: "", fideId: "", dateNaissance: "" }]);
   const removeJoueur = (i: number) => setJoueurs(joueurs.filter((_, idx) => idx !== i));
@@ -95,15 +100,48 @@ const TournamentModal = ({ tournament, onClose, onOpenLightbox }: {
 
   const inputCls = "w-full border rounded-xl px-3 py-2.5 text-sm bg-background focus:outline-none focus:ring-2 focus:ring-primary/30 transition-shadow";
 
+  const downloadCard = async () => {
+    if (!savedRegistration) return;
+    setDownloading(true);
+    try {
+      const { default: html2canvas } = await import('html2canvas');
+      const { default: jsPDF } = await import('jspdf');
+      const el = document.getElementById('confirmation-card');
+      if (!el) return;
+      const canvas = await html2canvas(el, { scale: 2, useCORS: true, backgroundColor: '#ffffff' });
+      const imgData = canvas.toDataURL('image/png');
+      const pdf = new jsPDF({ orientation: 'portrait', unit: 'px', format: [canvas.width / 2, canvas.height / 2] });
+      pdf.addImage(imgData, 'PNG', 0, 0, canvas.width / 2, canvas.height / 2);
+      pdf.save(`confirmation-${tournament.title.replace(/[^a-zA-Z0-9]/g, '-')}.pdf`);
+    } catch {
+      toast.error("Erreur lors du téléchargement.");
+    } finally { setDownloading(false); }
+  };
+
   const handleSubmit = async () => {
     setSubmitting(true);
     try {
+      let row: Registration;
       if (inscriptionType === 'solo') {
-        await submitRegistration({ tournament_id: tournament.id, type: 'solo', nom: soloForm.nom, prenom: soloForm.prenom, fide_id: soloForm.fideId, club: soloForm.club, date_naissance: soloForm.dateNaissance });
+        row = await submitRegistration({ tournament_id: tournament.id, type: 'solo', nom: soloForm.nom, prenom: soloForm.prenom, fide_id: soloForm.fideId, club: soloForm.club, date_naissance: soloForm.dateNaissance, email });
       } else {
-        await submitRegistration({ tournament_id: tournament.id, type: 'club', nom_club: clubForm.nomClub, responsable: clubForm.responsable, telephone: clubForm.telephone, joueurs });
+        row = await submitRegistration({ tournament_id: tournament.id, type: 'club', nom_club: clubForm.nomClub, responsable: clubForm.responsable, telephone: clubForm.telephone, joueurs, email });
       }
+      setSavedRegistration(row);
       setStep("success");
+      // Envoi email en arrière-plan (non-bloquant)
+      if (email) {
+        fetch('/api/send-registration-email', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            email,
+            type: inscriptionType,
+            tournament: { title: tournament.title, date: tournament.date, location: tournament.location, type: tournament.type },
+            registration: row,
+          }),
+        }).then(r => { if (r.ok) setEmailSent(true) }).catch(() => {});
+      }
     } catch {
       toast.error("Erreur lors de l'inscription. Veuillez réessayer.");
     } finally { setSubmitting(false); }
@@ -273,7 +311,11 @@ const TournamentModal = ({ tournament, onClose, onOpenLightbox }: {
                   <div><label className="text-xs font-medium mb-1 block">FIDE ID <span className="text-muted-foreground">(optionnel)</span></label><input className={inputCls} placeholder="Ex : 12345678" value={soloForm.fideId} onChange={e => setSoloForm({ ...soloForm, fideId: e.target.value })} /></div>
                   <div><label className="text-xs font-medium mb-1 block">Club</label><input className={inputCls} value={soloForm.club} onChange={e => setSoloForm({ ...soloForm, club: e.target.value })} /></div>
                   <div><label className="text-xs font-medium mb-1 block">Date de naissance *</label><input type="text" placeholder="JJ/MM/AAAA" className={inputCls} value={soloForm.dateNaissance} onChange={e => setSoloForm({ ...soloForm, dateNaissance: e.target.value })} /></div>
-                  <button onClick={handleSubmit} disabled={submitting || !soloForm.nom || !soloForm.prenom || !soloForm.dateNaissance}
+                  <div>
+                    <label className="text-xs font-medium mb-1 block">Email * <span className="text-muted-foreground font-normal">(confirmation envoyée)</span></label>
+                    <input type="email" placeholder="votre@email.com" className={inputCls} value={email} onChange={e => setEmail(e.target.value)} />
+                  </div>
+                  <button onClick={handleSubmit} disabled={submitting || !soloForm.nom || !soloForm.prenom || !soloForm.dateNaissance || !email}
                     className="w-full rounded-xl py-3.5 font-bold text-sm text-white flex items-center justify-center gap-2 disabled:opacity-50 active:scale-[0.99]"
                     style={{ background: "linear-gradient(135deg, hsl(var(--chess-blue-dark)), hsl(var(--chess-blue)))" }}>
                     {submitting && <Loader2 size={14} className="animate-spin" />} Valider mon inscription
@@ -318,7 +360,11 @@ const TournamentModal = ({ tournament, onClose, onOpenLightbox }: {
                       <Plus size={14} /> Ajouter un joueur
                     </button>
                   </div>
-                  <button onClick={handleSubmit} disabled={submitting || !clubForm.nomClub || !clubForm.responsable || joueurs.some(j => !j.nom || !j.prenom || !j.dateNaissance)}
+                  <div>
+                    <label className="text-xs font-medium mb-1 block">Email * <span className="text-muted-foreground font-normal">(confirmation envoyée)</span></label>
+                    <input type="email" placeholder="votre@email.com" className={inputCls} value={email} onChange={e => setEmail(e.target.value)} />
+                  </div>
+                  <button onClick={handleSubmit} disabled={submitting || !clubForm.nomClub || !clubForm.responsable || !email || joueurs.some(j => !j.nom || !j.prenom || !j.dateNaissance)}
                     className="w-full rounded-xl py-3.5 font-bold text-sm text-white flex items-center justify-center gap-2 disabled:opacity-50"
                     style={{ background: "linear-gradient(135deg, hsl(var(--chess-blue-dark)), hsl(var(--chess-blue)))" }}>
                     {submitting && <Loader2 size={14} className="animate-spin" />} Valider l'inscription du club
@@ -328,13 +374,53 @@ const TournamentModal = ({ tournament, onClose, onOpenLightbox }: {
             </div>
           )}
 
-          {step === "success" && (
-            <div className="p-10 flex flex-col items-center text-center gap-4">
-              <div className="w-16 h-16 rounded-full bg-green-100 flex items-center justify-center"><CheckCircle size={32} className="text-green-600" /></div>
-              <h3 className="text-xl font-bold">Inscription confirmée !</h3>
-              <p className="text-sm text-muted-foreground max-w-sm">Votre inscription au <span className="font-semibold text-foreground">{tournament.title}</span> a bien été enregistrée.</p>
-              <button onClick={onClose} className="mt-2 text-white rounded-xl px-6 py-3 font-bold text-sm"
-                style={{ background: "hsl(var(--chess-blue))" }}>Fermer</button>
+          {step === "success" && savedRegistration && (
+            <div className="p-4 md:p-6 space-y-4">
+              {/* Titre succès */}
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center shrink-0">
+                  <CheckCircle size={22} className="text-green-600" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-base">Inscription confirmée !</h3>
+                  <p className="text-xs text-muted-foreground">Votre fiche est prête à télécharger.</p>
+                </div>
+              </div>
+
+              {/* Fiche de confirmation — rendue en taille réduite, capturée en haute résolution */}
+              <div className="overflow-x-auto -mx-4 px-4 md:mx-0 md:px-0">
+                <div style={{ transform: "scale(0.82)", transformOrigin: "top left", width: "calc(100% / 0.82)" }}>
+                  <ConfirmationCard
+                    registration={savedRegistration}
+                    tournament={{ title: tournament.title, date: tournament.date, location: tournament.location, type: tournament.type }}
+                  />
+                </div>
+              </div>
+
+              {/* Actions */}
+              <div className="flex flex-col sm:flex-row gap-2 pt-1">
+                <button
+                  onClick={downloadCard}
+                  disabled={downloading}
+                  className="flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-xl font-semibold text-sm text-white disabled:opacity-60 transition-all active:scale-[0.98]"
+                  style={{ background: "linear-gradient(135deg, hsl(var(--chess-blue-dark)), hsl(var(--chess-blue)))" }}
+                >
+                  {downloading ? <Loader2 size={15} className="animate-spin" /> : <Download size={15} />}
+                  {downloading ? "Génération…" : "Télécharger la fiche (PDF)"}
+                </button>
+
+                <div className="flex items-center justify-center gap-2 py-3 px-4 rounded-xl border text-sm text-muted-foreground bg-muted/30 sm:flex-1">
+                  <Mail size={14} className={emailSent ? "text-green-500" : "text-muted-foreground"} />
+                  {emailSent
+                    ? <span className="text-green-600 font-medium">Email envoyé à {email}</span>
+                    : <span>Envoi de l'email en cours…</span>
+                  }
+                </div>
+              </div>
+
+              <button onClick={onClose} className="w-full text-sm text-muted-foreground hover:text-foreground py-2 transition-colors">
+                Fermer
+              </button>
             </div>
           )}
         </div>

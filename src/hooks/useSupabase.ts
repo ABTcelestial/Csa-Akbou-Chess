@@ -363,12 +363,14 @@ export interface Registration {
   telephone?: string
   date_naissance?: string
   joueurs?: { nom: string; prenom: string; fideId: string; dateNaissance: string }[]
+  email?: string
   created_at: string
 }
 
-export async function submitRegistration(data: Omit<Registration, 'id' | 'created_at'>) {
-  const { error } = await supabase.from('registrations').insert(data)
+export async function submitRegistration(data: Omit<Registration, 'id' | 'created_at'>): Promise<Registration> {
+  const { data: row, error } = await supabase.from('registrations').insert(data).select().single()
   if (error) throw error
+  return row
 }
 
 export function useRegistrations(tournamentId?: string) {

@@ -116,6 +116,7 @@ create table registrations (
   telephone     text,
   date_naissance text,
   joueurs       jsonb default '[]',  -- Pour clubs : [{nom, prenom, fideId, dateNaissance}]
+  email         text,
   created_at    timestamptz default now()
 );
 
