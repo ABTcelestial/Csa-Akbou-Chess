@@ -4,6 +4,7 @@ import logoClub from "@/assets/logo-club.jpg"
 interface ConfirmationCardProps {
   registration: Registration
   tournament: { title: string; date: string; location?: string; type?: string }
+  cardId?: string
 }
 
 // Palette
@@ -26,7 +27,7 @@ const Row = ({ label, value }: RowProps) =>
     </div>
   ) : null
 
-const ConfirmationCard = ({ registration, tournament }: ConfirmationCardProps) => {
+const ConfirmationCard = ({ registration, tournament, cardId = "confirmation-card" }: ConfirmationCardProps) => {
   const ref = `#${registration.id.slice(0, 8).toUpperCase()}`
   const dateInscrit = new Date(registration.created_at).toLocaleDateString("fr-FR", {
     day: "numeric", month: "long", year: "numeric",
@@ -34,7 +35,7 @@ const ConfirmationCard = ({ registration, tournament }: ConfirmationCardProps) =
 
   return (
     <div
-      id="confirmation-card"
+      id={cardId}
       style={{
         width: 620,
         fontFamily: "'Segoe UI', Arial, sans-serif",

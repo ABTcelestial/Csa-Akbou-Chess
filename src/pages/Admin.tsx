@@ -5,11 +5,12 @@ import {
   Trophy, LogOut, ChevronDown, ChevronUp, FileImage,
   Settings, Image, Megaphone, Loader2,
   LayoutDashboard, ClipboardList, UserCheck, Building2, Calendar, Search, Phone,
-  BarChart2, Globe, TrendingUp, Lock, Unlock
+  BarChart2, Globe, TrendingUp, Lock, Unlock, FileText, Download
 } from "lucide-react"
 import { useAuth, useTournaments, usePosts, useGallery, useRegistrations, usePlayers, Registration } from "@/hooks/useSupabase"
 import { useSiteConfig } from "@/lib/SiteConfigContext"
 import { supabase, uploadFile, uploadMultiple, Tournament, Post, Player } from "@/lib/supabase"
+import ConfirmationCard from "@/components/ConfirmationCard"
 import { toast } from "sonner"
 import logoClub from "@/assets/logo-club.jpg"
 
@@ -2167,6 +2168,38 @@ const Highlight = ({ text, query }: { text: string; query: string }) => {
 const RegistrationsPanel = ({ allTournaments, allRegistrations, loading, deleteConfirm, setDeleteConfirm, onDelete }: RegPanelProps) => {
   const [subTab, setSubTab] = useState<'active' | 'history'>('active')
   const [regSearch, setRegSearch] = useState('')
+  const [cardReg, setCardReg] = useState<Registration | null>(null)
+  const [downloading, setDownloading] = useState(false)
+
+  const cardTournament = cardReg
+    ? allTournaments.find(t => t.id === cardReg.tournament_id)
+    : null
+
+  const downloadAdminCard = async () => {
+    setDownloading(true)
+    try {
+      const { default: html2canvas } = await import('html2canvas')
+      const { default: jsPDF } = await import('jspdf')
+      const el = document.getElementById('confirmation-card-admin')
+      if (!el) return
+      const canvas = await html2canvas(el, { scale: 2, useCORS: true, backgroundColor: '#ffffff' })
+      const imgData = canvas.toDataURL('image/png')
+      const pdf = new jsPDF({ orientation: 'portrait', unit: 'pt', format: 'a4' })
+      const pageW = pdf.internal.pageSize.getWidth()
+      const pageH = pdf.internal.pageSize.getHeight()
+      const margin = 36
+      const maxW = pageW - margin * 2
+      const imgH = (canvas.height / canvas.width) * maxW
+      const yPos = imgH < pageH - margin * 2 ? (pageH - imgH) / 2 : margin
+      pdf.addImage(imgData, 'PNG', margin, yPos, maxW, imgH)
+      const name = cardReg?.type === 'solo'
+        ? `${cardReg.prenom ?? ''}-${cardReg.nom ?? ''}`.replace(/\s+/g, '-')
+        : (cardReg?.nom_club ?? 'club').replace(/\s+/g, '-')
+      pdf.save(`confirmation-${name}.pdf`)
+    } catch {
+      toast.error('Erreur lors du téléchargement')
+    } finally { setDownloading(false) }
+  }
 
   const activeTournaments   = allTournaments.filter(t => !t.is_past)
   const finishedTournaments = allTournaments.filter(t => t.is_past)
@@ -2205,6 +2238,51 @@ const RegistrationsPanel = ({ allTournaments, allRegistrations, loading, deleteC
   ).length : 0
 
   return (
+    <>
+    {/* ── Modal fiche de confirmation ── */}
+    {cardReg && cardTournament && (
+      <div className="fixed inset-0 z-[70] bg-black/70 backdrop-blur-sm flex items-center justify-center p-4"
+        onClick={() => setCardReg(null)}>
+        <div className="bg-white rounded-2xl shadow-2xl overflow-hidden w-full max-w-2xl flex flex-col max-h-[92vh]"
+          onClick={e => e.stopPropagation()}>
+          {/* Header modal */}
+          <div className="flex items-center justify-between px-5 py-3 border-b shrink-0">
+            <div>
+              <p className="font-bold text-sm">Fiche de confirmation</p>
+              <p className="text-xs text-muted-foreground">
+                {cardReg.type === 'solo'
+                  ? `${cardReg.prenom ?? ''} ${cardReg.nom ?? ''}`.trim()
+                  : cardReg.nom_club}
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={downloadAdminCard}
+                disabled={downloading}
+                className="flex items-center gap-1.5 text-xs font-semibold text-white px-3 py-2 rounded-xl disabled:opacity-60 transition-all"
+                style={{ background: "hsl(var(--chess-blue))" }}
+              >
+                {downloading ? <Loader2 size={13} className="animate-spin" /> : <Download size={13} />}
+                {downloading ? 'Génération…' : 'Télécharger PDF'}
+              </button>
+              <button onClick={() => setCardReg(null)}
+                className="p-2 rounded-lg hover:bg-muted text-muted-foreground transition-colors">
+                <X size={16} />
+              </button>
+            </div>
+          </div>
+          {/* Carte — scrollable si trop haute */}
+          <div className="overflow-auto p-4 flex justify-center">
+            <ConfirmationCard
+              registration={cardReg}
+              tournament={{ title: cardTournament.title, date: cardTournament.date, location: cardTournament.location, type: cardTournament.type }}
+              cardId="confirmation-card-admin"
+            />
+          </div>
+        </div>
+      </div>
+    )}
+
     <div className="space-y-5">
       <div className="flex items-center gap-3 flex-wrap">
         <h2 className="text-xl font-bold shrink-0">Inscriptions</h2>
@@ -2330,17 +2408,23 @@ const RegistrationsPanel = ({ allTournaments, allRegistrations, loading, deleteC
                                       {new Date(r.created_at).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}
                                     </td>
                                     <td className="px-4 py-3">
-                                      {deleteConfirm === r.id ? (
-                                        <div className="flex gap-1">
-                                          <button onClick={async () => { try { await onDelete(r.id); setDeleteConfirm(null); toast.success("Inscription supprimée") } catch { toast.error("Erreur lors de la suppression") } }}
-                                            className="text-[10px] bg-red-500 text-white px-2 py-1 rounded-lg">Oui</button>
-                                          <button onClick={() => setDeleteConfirm(null)} className="text-[10px] border px-2 py-1 rounded-lg">Non</button>
-                                        </div>
-                                      ) : (
-                                        <button onClick={() => setDeleteConfirm(r.id)} className="text-muted-foreground hover:text-red-500 transition-colors p-1 rounded">
-                                          <Trash2 size={13} />
+                                      <div className="flex items-center gap-1">
+                                        <button onClick={() => setCardReg(r)} title="Voir la fiche de confirmation"
+                                          className="text-muted-foreground hover:text-primary transition-colors p-1 rounded">
+                                          <FileText size={13} />
                                         </button>
-                                      )}
+                                        {deleteConfirm === r.id ? (
+                                          <div className="flex gap-1">
+                                            <button onClick={async () => { try { await onDelete(r.id); setDeleteConfirm(null); toast.success("Inscription supprimée") } catch { toast.error("Erreur lors de la suppression") } }}
+                                              className="text-[10px] bg-red-500 text-white px-2 py-1 rounded-lg">Oui</button>
+                                            <button onClick={() => setDeleteConfirm(null)} className="text-[10px] border px-2 py-1 rounded-lg">Non</button>
+                                          </div>
+                                        ) : (
+                                          <button onClick={() => setDeleteConfirm(r.id)} className="text-muted-foreground hover:text-red-500 transition-colors p-1 rounded">
+                                            <Trash2 size={13} />
+                                          </button>
+                                        )}
+                                      </div>
                                     </td>
                                   </tr>
                                 )
@@ -2381,11 +2465,15 @@ const RegistrationsPanel = ({ allTournaments, allRegistrations, loading, deleteC
                                       {r.telephone && <span className="ml-2 text-muted-foreground">· {r.telephone}</span>}
                                     </p>
                                   </div>
-                                  <div className="flex items-center gap-3 ml-3 shrink-0">
+                                  <div className="flex items-center gap-2 ml-3 shrink-0">
                                     <div className="text-right">
                                       <p className="text-xl font-bold" style={{ color: "hsl(var(--chess-gold-dark))" }}>{joueurs.length}</p>
                                       <p className="text-[10px] text-muted-foreground">joueur{joueurs.length > 1 ? 's' : ''}</p>
                                     </div>
+                                    <button onClick={() => setCardReg(r)} title="Voir la fiche de confirmation"
+                                      className="text-muted-foreground hover:text-primary transition-colors p-1.5 rounded-lg hover:bg-primary/10">
+                                      <FileText size={14} />
+                                    </button>
                                     {deleteConfirm === r.id ? (
                                       <div className="flex gap-1">
                                         <button onClick={async () => { try { await onDelete(r.id); setDeleteConfirm(null); toast.success("Inscription supprimée") } catch { toast.error("Erreur lors de la suppression") } }}
@@ -2448,6 +2536,7 @@ const RegistrationsPanel = ({ allTournaments, allRegistrations, loading, deleteC
         </div>
       )}
     </div>
+    </>
   )
 }
 
