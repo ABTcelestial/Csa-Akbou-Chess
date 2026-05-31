@@ -2324,7 +2324,7 @@ const RegistrationsPanel = ({ allTournaments, allRegistrations, loading, deleteC
                                       <Highlight text={r.club || '—'} query={regSearch} />
                                     </td>
                                     <td className="px-4 py-3 text-muted-foreground hidden lg:table-cell text-xs">
-                                      {(r as any).date_naissance ? new Date((r as any).date_naissance).toLocaleDateString('fr-FR') : '—'}
+                                      {(r as any).date_naissance || '—'}
                                     </td>
                                     <td className="px-4 py-3 text-xs text-muted-foreground whitespace-nowrap">
                                       {new Date(r.created_at).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}
@@ -2422,7 +2422,7 @@ const RegistrationsPanel = ({ allTournaments, allRegistrations, loading, deleteC
                                               <Highlight text={`${j.prenom || ''} ${j.nom || ''}`.trim()} query={regSearch} />
                                             </td>
                                             <td className="px-4 py-2.5 text-xs text-muted-foreground hidden sm:table-cell">{j.fideId || '—'}</td>
-                                            <td className="px-4 py-2.5 text-xs text-muted-foreground hidden md:table-cell">{(j as any).dateNaissance ? new Date((j as any).dateNaissance).toLocaleDateString('fr-FR') : '—'}</td>
+                                            <td className="px-4 py-2.5 text-xs text-muted-foreground hidden md:table-cell">{(j as any).dateNaissance || '—'}</td>
                                           </tr>
                                         )
                                       })}
