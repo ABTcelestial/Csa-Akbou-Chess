@@ -1,5 +1,5 @@
 import { Registration } from "@/hooks/useSupabase"
-import logoClub from "@/assets/logo-club.jpg"
+import logoClub from "@/assets/logo-club-b64"
 
 interface ConfirmationCardProps {
   registration: Registration

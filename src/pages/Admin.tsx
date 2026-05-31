@@ -2182,7 +2182,7 @@ const RegistrationsPanel = ({ allTournaments, allRegistrations, loading, deleteC
       const { jsPDF } = await import('jspdf')
       const el = document.getElementById('confirmation-card-admin')
       if (!el) return
-      const canvas = await html2canvas(el, { scale: 2, useCORS: true, backgroundColor: '#ffffff' })
+      const canvas = await html2canvas(el, { scale: 2, allowTaint: true, useCORS: false, backgroundColor: '#ffffff', logging: false })
       const imgData = canvas.toDataURL('image/png')
       const pdf = new jsPDF({ orientation: 'portrait', unit: 'pt', format: 'a4' })
       const pageW = pdf.internal.pageSize.getWidth()

@@ -108,7 +108,7 @@ const TournamentModal = ({ tournament, onClose, onOpenLightbox }: {
       const { jsPDF } = await import('jspdf');
       const el = document.getElementById('confirmation-card');
       if (!el) return;
-      const canvas = await html2canvas(el, { scale: 2, useCORS: true, backgroundColor: '#ffffff' });
+      const canvas = await html2canvas(el, { scale: 2, allowTaint: true, useCORS: false, backgroundColor: '#ffffff', logging: false });
       const imgData = canvas.toDataURL('image/png');
       // Format A4 avec marges — la carte est centrée verticalement sur la page
       const pdf = new jsPDF({ orientation: 'portrait', unit: 'pt', format: 'a4' });
