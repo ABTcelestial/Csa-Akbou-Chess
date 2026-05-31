@@ -25,7 +25,7 @@ export interface Tournament {
   description: string
   homologue: boolean
   niveaux: string
-  fiches_techniques_urls: string[]
+  fiches_techniques_urls?: string[]
   is_past: boolean
   extra_places?: { rank: number; name: string; category: string }[]
   registrations_closed?: boolean

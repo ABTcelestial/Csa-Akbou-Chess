@@ -2332,7 +2332,7 @@ const RegistrationsPanel = ({ allTournaments, allRegistrations, loading, deleteC
                                     <td className="px-4 py-3">
                                       {deleteConfirm === r.id ? (
                                         <div className="flex gap-1">
-                                          <button onClick={async () => { await onDelete(r.id); setDeleteConfirm(null); toast.success("Supprimé") }}
+                                          <button onClick={async () => { try { await onDelete(r.id); setDeleteConfirm(null); toast.success("Inscription supprimée") } catch { toast.error("Erreur lors de la suppression") } }}
                                             className="text-[10px] bg-red-500 text-white px-2 py-1 rounded-lg">Oui</button>
                                           <button onClick={() => setDeleteConfirm(null)} className="text-[10px] border px-2 py-1 rounded-lg">Non</button>
                                         </div>
@@ -2388,7 +2388,7 @@ const RegistrationsPanel = ({ allTournaments, allRegistrations, loading, deleteC
                                     </div>
                                     {deleteConfirm === r.id ? (
                                       <div className="flex gap-1">
-                                        <button onClick={async () => { await onDelete(r.id); setDeleteConfirm(null); toast.success("Supprimé") }}
+                                        <button onClick={async () => { try { await onDelete(r.id); setDeleteConfirm(null); toast.success("Inscription supprimée") } catch { toast.error("Erreur lors de la suppression") } }}
                                           className="text-[10px] bg-red-500 text-white px-2 py-1 rounded-lg">Oui</button>
                                         <button onClick={() => setDeleteConfirm(null)} className="text-[10px] border px-2 py-1 rounded-lg">Non</button>
                                       </div>
@@ -2463,7 +2463,7 @@ const Admin = () => {
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null)
   const [expandedId, setExpandedId] = useState<string | null>(null)
 
-  const { data: allTournaments, loading: tLoading, create: createT, update: updateT, remove: removeT } = useTournaments()
+  const { data: allTournaments, loading: tLoading, create: createT, update: updateT, remove: removeT, loadForEdit: loadTournamentForEdit } = useTournaments()
   const { data: posts, loading: pLoading, create: createPost, update: updatePost, remove: removePost } = usePosts()
   const { data: allRegistrations, loading: rLoading, remove: removeReg } = useRegistrations()
   const { data: allPlayers, loading: playersLoading, create: createPlayer, update: updatePlayer, remove: removePlayer } = usePlayers()
@@ -2510,6 +2510,15 @@ const Admin = () => {
     const newValue = !t.registrations_closed
     await updateT(t.id, { registrations_closed: newValue })
     toast.success(newValue ? "Inscriptions clôturées 🔒" : "Inscriptions rouvertes ✅")
+  }
+
+  const handleEditTournament = async (t: Tournament) => {
+    try {
+      const full = await loadTournamentForEdit(t.id)
+      setEditTournament(full)
+    } catch {
+      setEditTournament(t)
+    }
   }
 
   const handleSavePost = async (data: Omit<Post, 'id' | 'created_at' | 'updated_at'>) => {
@@ -2669,7 +2678,7 @@ const Admin = () => {
             <RegistrationsPanel
               allTournaments={allTournaments}
               allRegistrations={allRegistrations}
-              loading={rLoading}
+              loading={rLoading || tLoading}
               deleteConfirm={deleteConfirm}
               setDeleteConfirm={setDeleteConfirm}
               onDelete={removeReg}
@@ -2685,7 +2694,7 @@ const Admin = () => {
               setExpandedId={setExpandedId}
               deleteConfirm={deleteConfirm}
               setDeleteConfirm={setDeleteConfirm}
-              onEdit={setEditTournament}
+              onEdit={handleEditTournament}
               onDelete={removeT}
               onNew={() => setEditTournament('new')}
               onToggleRegistrations={handleToggleRegistrations}

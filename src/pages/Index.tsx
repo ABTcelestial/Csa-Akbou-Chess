@@ -8,7 +8,7 @@ import heroImage from "@/assets/hero-chess.jpg";
 import tournamentImage from "@/assets/tournament.jpg";
 
 const Index = () => {
-  const { data: gallery, loading: galleryLoading } = useGallery();
+  const { data: gallery, loading: galleryLoading } = useGallery(10);
   const { data: tournaments } = useTournaments();
   const { data: players } = usePlayers();
   const { get } = useSiteConfig();

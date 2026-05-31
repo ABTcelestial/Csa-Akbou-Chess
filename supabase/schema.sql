@@ -177,6 +177,18 @@ create policy "public insert registrations"    on registrations for insert with 
 create policy "auth write site_config"         on site_config   for all using (auth.role() = 'authenticated');
 create policy "auth write tournaments"         on tournaments   for all using (auth.role() = 'authenticated');
 create policy "auth write posts"               on posts         for all using (auth.role() = 'authenticated');
-create policy "auth write registrations"       on registrations for select using (auth.role() = 'authenticated');
+create policy "auth write registrations"       on registrations for all    using (auth.role() = 'authenticated');
 create policy "auth write gallery"             on gallery       for all using (auth.role() = 'authenticated');
 create policy "auth write players"             on players       for all using (auth.role() = 'authenticated');
+
+-- ── Fonction publique : compte d'inscrits pour un tournoi ─────────
+-- SECURITY DEFINER pour contourner RLS et retourner uniquement le compte
+-- sans exposer les données personnelles des inscrits.
+create or replace function public.get_registration_count(p_tournament_id uuid)
+returns bigint
+language sql
+security definer
+as $$
+  select count(*) from registrations where tournament_id = p_tournament_id;
+$$;
+grant execute on function public.get_registration_count(uuid) to anon, authenticated;

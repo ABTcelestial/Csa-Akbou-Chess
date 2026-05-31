@@ -4,7 +4,7 @@ import { useState, useMemo, useEffect } from "react";
 import { Calendar, Clock, Users, MapPin, X, ChevronRight, UserPlus, Building2, Plus, Trash2, CheckCircle, FileImage, Loader2, Search, Trophy, ChevronLeft, Lock, Link2, Check } from "lucide-react";
 import { useTournaments, submitRegistration } from "@/hooks/useSupabase";
 import { useSearchParams } from "react-router-dom";
-import { Tournament } from "@/lib/supabase";
+import { supabase, Tournament } from "@/lib/supabase";
 import { toast } from "sonner";
 
 // ── Statut automatique selon la date ─────────────────────────────
@@ -58,6 +58,24 @@ const TournamentModal = ({ tournament, onClose, onOpenLightbox }: {
   const [step, setStep] = useState<"detail" | "form" | "success">("detail");
   const [linkCopied, setLinkCopied] = useState(false);
 
+  // Fiches chargées lazily si absentes du payload principal (images exclues du select liste)
+  const [fiches, setFiches] = useState<string[]>(tournament.fiches_techniques_urls ?? []);
+  useEffect(() => {
+    if (tournament.fiches_techniques_urls !== undefined) return;
+    supabase.from('tournaments')
+      .select('fiches_techniques_urls')
+      .eq('id', tournament.id)
+      .single()
+      .then(({ data }) => setFiches(data?.fiches_techniques_urls || []));
+  }, [tournament.id]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Nombre d'inscrits — via fonction RPC (RLS ne permet pas le SELECT public sur registrations)
+  const [regCount, setRegCount] = useState<number | null>(null);
+  useEffect(() => {
+    supabase.rpc('get_registration_count', { p_tournament_id: tournament.id })
+      .then(({ data }) => setRegCount(typeof data === 'number' ? data : null));
+  }, [tournament.id]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const copyLink = async () => {
     const url = `${window.location.origin}/tournois?t=${tournament.id}`;
     await navigator.clipboard.writeText(url);
@@ -76,7 +94,6 @@ const TournamentModal = ({ tournament, onClose, onOpenLightbox }: {
     setJoueurs(joueurs.map((j, idx) => idx === i ? { ...j, [field]: value } : j));
 
   const inputCls = "w-full border rounded-xl px-3 py-2.5 text-sm bg-background focus:outline-none focus:ring-2 focus:ring-primary/30 transition-shadow";
-  const fiches = tournament.fiches_techniques_urls || [];
 
   const handleSubmit = async () => {
     setSubmitting(true);
@@ -163,6 +180,22 @@ const TournamentModal = ({ tournament, onClose, onOpenLightbox }: {
                         </div>
                       </div>
                     ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Compteur d'inscrits */}
+              {!tournament.is_past && regCount !== null && (
+                <div className="flex items-center gap-2.5 rounded-xl px-3 py-2.5 border"
+                  style={{ background: "hsl(var(--chess-blue)/0.04)", borderColor: "hsl(var(--chess-blue)/0.12)" }}>
+                  <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0" style={{ background: "hsl(var(--chess-blue)/0.1)" }}>
+                    <Users size={14} style={{ color: "hsl(var(--chess-blue))" }} />
+                  </div>
+                  <div>
+                    <p className="text-[10px] text-muted-foreground">Inscrits</p>
+                    <p className="text-xs md:text-sm font-semibold">
+                      {regCount === 0 ? "Soyez le premier !" : `${regCount} participant${regCount > 1 ? 's' : ''}`}
+                    </p>
                   </div>
                 </div>
               )}

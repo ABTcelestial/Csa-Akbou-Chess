@@ -17,6 +17,16 @@ async function withRetry<T>(fn: () => Promise<T>, retries = 3): Promise<T> {
 }
 
 // ── Tournaments ──────────────────────────────────────────────────
+// Colonnes sans images base64 (fiches_techniques_urls, photos_urls).
+// Les images sont lourdes (200–300 KB chacune) — chargées à la demande via loadForEdit.
+const TOURNAMENTS_META = [
+  'id','title','date','date_iso','cadence','type','rounds','location',
+  'description','homologue','niveaux','is_past','extra_places',
+  'winner','participants','winner_medal','winner_note',
+  'podium_1','podium_2','podium_3',
+  'registrations_closed','display_order','created_at','updated_at',
+].join(',')
+
 export function useTournaments() {
   const [data, setData] = useState<Tournament[]>([])
   const [loading, setLoading] = useState(true)
@@ -27,7 +37,7 @@ export function useTournaments() {
     setError(null)
     try {
       const { data: rows, error: err } = await withRetry(() =>
-        supabase.from('tournaments').select('*')
+        supabase.from('tournaments').select(TOURNAMENTS_META)
           .order('display_order', { ascending: true })
           .order('created_at', { ascending: false })
       )
@@ -78,7 +88,14 @@ export function useTournaments() {
     setData(prev => prev.filter(x => x.id !== id))
   }
 
-  return { data, loading, error, create, update, remove, refetch: fetch }
+  const loadForEdit = async (id: string): Promise<Tournament> => {
+    const { data: row, error: err } = await supabase
+      .from('tournaments').select('*').eq('id', id).single()
+    if (err) throw err
+    return row
+  }
+
+  return { data, loading, error, create, update, remove, refetch: fetch, loadForEdit }
 }
 
 // ── Posts (réalisations) ─────────────────────────────────────────
@@ -140,21 +157,21 @@ export function usePosts() {
 }
 
 // ── Gallery ──────────────────────────────────────────────────────
-export function useGallery() {
+export function useGallery(limit?: number) {
   const [data, setData] = useState<GalleryPhoto[]>([])
   const [loading, setLoading] = useState(true)
 
   const fetch = useCallback(async () => {
     setLoading(true)
     try {
-      const { data: rows } = await withRetry(() =>
-        supabase.from('gallery').select('*')
-          .order('display_order', { ascending: true })
-          .order('created_at', { ascending: false })
-      )
+      let q = supabase.from('gallery').select('*')
+        .order('display_order', { ascending: true })
+        .order('created_at', { ascending: false })
+      if (limit) q = q.limit(limit)
+      const { data: rows } = await withRetry(() => q)
       setData(rows || [])
     } catch {} finally { setLoading(false) }
-  }, [])
+  }, [limit])
 
   useEffect(() => { fetch() }, [fetch])
 
@@ -371,7 +388,8 @@ export function useRegistrations(tournamentId?: string) {
   useEffect(() => { fetch() }, [fetch])
 
   const remove = async (id: string) => {
-    await supabase.from('registrations').delete().eq('id', id)
+    const { error } = await supabase.from('registrations').delete().eq('id', id)
+    if (error) throw error
     setData(prev => prev.filter(x => x.id !== id))
   }
 
