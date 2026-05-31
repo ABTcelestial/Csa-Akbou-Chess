@@ -106,11 +106,19 @@ const TournamentModal = ({ tournament, onClose, onOpenLightbox }: {
     try {
       const { default: html2canvas } = await import('html2canvas');
       const { jsPDF } = await import('jspdf');
-      const el = document.getElementById('confirmation-card');
-      if (!el) return;
-      const canvas = await html2canvas(el, { scale: 2, allowTaint: true, useCORS: false, backgroundColor: '#ffffff', logging: false });
+      // On capture la copie cachée hors de tout overflow/transform
+      const el = document.getElementById('confirmation-card-print');
+      if (!el) { toast.error("Élément introuvable."); return; }
+      const canvas = await html2canvas(el, {
+        scale: 2,
+        allowTaint: true,
+        useCORS: false,
+        backgroundColor: '#ffffff',
+        logging: false,
+        width: el.offsetWidth,
+        height: el.offsetHeight,
+      });
       const imgData = canvas.toDataURL('image/png');
-      // Format A4 avec marges — la carte est centrée verticalement sur la page
       const pdf = new jsPDF({ orientation: 'portrait', unit: 'pt', format: 'a4' });
       const pageW = pdf.internal.pageSize.getWidth();
       const pageH = pdf.internal.pageSize.getHeight();
@@ -120,7 +128,8 @@ const TournamentModal = ({ tournament, onClose, onOpenLightbox }: {
       const yPos = imgH < pageH - margin * 2 ? (pageH - imgH) / 2 : margin;
       pdf.addImage(imgData, 'PNG', margin, yPos, maxW, imgH);
       pdf.save(`confirmation-${tournament.title.replace(/[^a-zA-Z0-9]/g, '-')}.pdf`);
-    } catch {
+    } catch (err) {
+      console.error('PDF error:', err);
       toast.error("Erreur lors du téléchargement.");
     } finally { setDownloading(false); }
   };
@@ -432,6 +441,20 @@ const TournamentModal = ({ tournament, onClose, onOpenLightbox }: {
           )}
         </div>
       </div>
+
+      {/* Carte cachée hors de tout overflow/transform — capturée par html2canvas pour le PDF */}
+      {step === "success" && savedRegistration && (
+        <div
+          aria-hidden="true"
+          style={{ position: 'fixed', left: '200vw', top: 0, zIndex: -1, pointerEvents: 'none' }}
+        >
+          <ConfirmationCard
+            registration={savedRegistration}
+            tournament={{ title: tournament.title, date: tournament.date, location: tournament.location, type: tournament.type }}
+            cardId="confirmation-card-print"
+          />
+        </div>
+      )}
     </div>
   );
 };
