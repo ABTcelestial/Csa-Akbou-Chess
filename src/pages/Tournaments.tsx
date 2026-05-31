@@ -312,10 +312,10 @@ const TournamentModal = ({ tournament, onClose, onOpenLightbox }: {
                   <div><label className="text-xs font-medium mb-1 block">Club</label><input className={inputCls} value={soloForm.club} onChange={e => setSoloForm({ ...soloForm, club: e.target.value })} /></div>
                   <div><label className="text-xs font-medium mb-1 block">Date de naissance *</label><input type="text" placeholder="JJ/MM/AAAA" className={inputCls} value={soloForm.dateNaissance} onChange={e => setSoloForm({ ...soloForm, dateNaissance: e.target.value })} /></div>
                   <div>
-                    <label className="text-xs font-medium mb-1 block">Email * <span className="text-muted-foreground font-normal">(confirmation envoyée)</span></label>
+                    <label className="text-xs font-medium mb-1 block">Email <span className="text-muted-foreground font-normal">(optionnel — confirmation envoyée)</span></label>
                     <input type="email" placeholder="votre@email.com" className={inputCls} value={email} onChange={e => setEmail(e.target.value)} />
                   </div>
-                  <button onClick={handleSubmit} disabled={submitting || !soloForm.nom || !soloForm.prenom || !soloForm.dateNaissance || !email}
+                  <button onClick={handleSubmit} disabled={submitting || !soloForm.nom || !soloForm.prenom || !soloForm.dateNaissance}
                     className="w-full rounded-xl py-3.5 font-bold text-sm text-white flex items-center justify-center gap-2 disabled:opacity-50 active:scale-[0.99]"
                     style={{ background: "linear-gradient(135deg, hsl(var(--chess-blue-dark)), hsl(var(--chess-blue)))" }}>
                     {submitting && <Loader2 size={14} className="animate-spin" />} Valider mon inscription
@@ -361,10 +361,10 @@ const TournamentModal = ({ tournament, onClose, onOpenLightbox }: {
                     </button>
                   </div>
                   <div>
-                    <label className="text-xs font-medium mb-1 block">Email * <span className="text-muted-foreground font-normal">(confirmation envoyée)</span></label>
+                    <label className="text-xs font-medium mb-1 block">Email <span className="text-muted-foreground font-normal">(optionnel — confirmation envoyée)</span></label>
                     <input type="email" placeholder="votre@email.com" className={inputCls} value={email} onChange={e => setEmail(e.target.value)} />
                   </div>
-                  <button onClick={handleSubmit} disabled={submitting || !clubForm.nomClub || !clubForm.responsable || !email || joueurs.some(j => !j.nom || !j.prenom || !j.dateNaissance)}
+                  <button onClick={handleSubmit} disabled={submitting || !clubForm.nomClub || !clubForm.responsable || joueurs.some(j => !j.nom || !j.prenom || !j.dateNaissance)}
                     className="w-full rounded-xl py-3.5 font-bold text-sm text-white flex items-center justify-center gap-2 disabled:opacity-50"
                     style={{ background: "linear-gradient(135deg, hsl(var(--chess-blue-dark)), hsl(var(--chess-blue)))" }}>
                     {submitting && <Loader2 size={14} className="animate-spin" />} Valider l'inscription du club

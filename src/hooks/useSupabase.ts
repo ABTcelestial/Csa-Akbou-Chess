@@ -368,9 +368,12 @@ export interface Registration {
 }
 
 export async function submitRegistration(data: Omit<Registration, 'id' | 'created_at'>): Promise<Registration> {
-  const { data: row, error } = await supabase.from('registrations').insert(data).select().single()
+  // On génère l'UUID côté client pour éviter un SELECT (public n'a que INSERT via RLS)
+  const id = crypto.randomUUID()
+  const created_at = new Date().toISOString()
+  const { error } = await supabase.from('registrations').insert({ ...data, id })
   if (error) throw error
-  return row
+  return { ...data, id, created_at } as Registration
 }
 
 export function useRegistrations(tournamentId?: string) {
