@@ -110,8 +110,15 @@ const TournamentModal = ({ tournament, onClose, onOpenLightbox }: {
       if (!el) return;
       const canvas = await html2canvas(el, { scale: 2, useCORS: true, backgroundColor: '#ffffff' });
       const imgData = canvas.toDataURL('image/png');
-      const pdf = new jsPDF({ orientation: 'portrait', unit: 'px', format: [canvas.width / 2, canvas.height / 2] });
-      pdf.addImage(imgData, 'PNG', 0, 0, canvas.width / 2, canvas.height / 2);
+      // Format A4 avec marges — la carte est centrée verticalement sur la page
+      const pdf = new jsPDF({ orientation: 'portrait', unit: 'pt', format: 'a4' });
+      const pageW = pdf.internal.pageSize.getWidth();
+      const pageH = pdf.internal.pageSize.getHeight();
+      const margin = 36;
+      const maxW = pageW - margin * 2;
+      const imgH = (canvas.height / canvas.width) * maxW;
+      const yPos = imgH < pageH - margin * 2 ? (pageH - imgH) / 2 : margin;
+      pdf.addImage(imgData, 'PNG', margin, yPos, maxW, imgH);
       pdf.save(`confirmation-${tournament.title.replace(/[^a-zA-Z0-9]/g, '-')}.pdf`);
     } catch {
       toast.error("Erreur lors du téléchargement.");
