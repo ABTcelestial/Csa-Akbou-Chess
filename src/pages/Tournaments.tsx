@@ -105,7 +105,7 @@ const TournamentModal = ({ tournament, onClose, onOpenLightbox }: {
     setDownloading(true);
     try {
       const { default: html2canvas } = await import('html2canvas');
-      const { default: jsPDF } = await import('jspdf');
+      const { jsPDF } = await import('jspdf');
       const el = document.getElementById('confirmation-card');
       if (!el) return;
       const canvas = await html2canvas(el, { scale: 2, useCORS: true, backgroundColor: '#ffffff' });
