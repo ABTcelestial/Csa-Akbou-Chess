@@ -17,14 +17,13 @@ async function withRetry<T>(fn: () => Promise<T>, retries = 3): Promise<T> {
 }
 
 // ── Tournaments ──────────────────────────────────────────────────
-// Colonnes sans images base64 (fiches_techniques_urls, photos_urls).
-// Les images sont lourdes (200–300 KB chacune) — chargées à la demande via loadForEdit.
 const TOURNAMENTS_META = [
   'id','title','date','date_iso','cadence','type','rounds','location',
   'description','homologue','niveaux','is_past','extra_places',
   'winner','participants','winner_medal','winner_note',
   'podium_1','podium_2','podium_3',
   'registrations_closed','display_order','created_at','updated_at',
+  'fiches_techniques_urls',
 ].join(',')
 
 export function useTournaments() {

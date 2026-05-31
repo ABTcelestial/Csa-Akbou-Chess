@@ -59,16 +59,7 @@ const TournamentModal = ({ tournament, onClose, onOpenLightbox }: {
   const [step, setStep] = useState<"detail" | "form" | "success">("detail");
   const [linkCopied, setLinkCopied] = useState(false);
 
-  // Fiches chargées lazily si absentes du payload principal (images exclues du select liste)
-  const [fiches, setFiches] = useState<string[]>(tournament.fiches_techniques_urls ?? []);
-  useEffect(() => {
-    if (tournament.fiches_techniques_urls !== undefined) return;
-    supabase.from('tournaments')
-      .select('fiches_techniques_urls')
-      .eq('id', tournament.id)
-      .single()
-      .then(({ data }) => setFiches(data?.fiches_techniques_urls || []));
-  }, [tournament.id]); // eslint-disable-line react-hooks/exhaustive-deps
+  const fiches = tournament.fiches_techniques_urls ?? [];
 
   // Nombre d'inscrits — via fonction RPC (RLS ne permet pas le SELECT public sur registrations)
   const [regCount, setRegCount] = useState<number | null>(null);
