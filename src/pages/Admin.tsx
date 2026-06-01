@@ -2206,37 +2206,51 @@ const RegistrationsPanel = ({ allTournaments, allRegistrations, loading, deleteC
   const escapeXml = (str: string) =>
     str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
 
+  // Convertit DD/MM/YYYY ou YYYY-MM-DD → YYYYMMDD (format Swiss Manager)
+  const parseBirthday = (d?: string): string => {
+    if (!d) return '0'
+    const slash = d.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/)
+    if (slash) return `${slash[3]}${slash[2].padStart(2,'0')}${slash[1].padStart(2,'0')}`
+    const iso = d.match(/^(\d{4})-(\d{2})-(\d{2})/)
+    if (iso) return `${iso[1]}${iso[2]}${iso[3]}`
+    return '0'
+  }
+
   const exportTournamentXml = (tournament: Tournament, registrations: Registration[]) => {
     const tournRegs = registrations.filter(r => r.tournament_id === tournament.id)
-    const players: { no: number; lastname: string; firstname: string; fideId: string; club: string; birthDate: string }[] = []
-    let no = 1
+    const players: { uid: number; sno: number; lastname: string; firstname: string; fideId: string; club: string; birthday: string }[] = []
+    let sno = 1
     tournRegs.forEach(reg => {
       if (reg.type === 'solo') {
         players.push({
-          no: no++,
+          uid: sno, sno: sno++,
           lastname: (reg.nom ?? '').toUpperCase(),
           firstname: reg.prenom ?? '',
-          fideId: reg.fide_id ?? '',
+          fideId: reg.fide_id || '0',
           club: reg.club ?? '',
-          birthDate: reg.date_naissance ?? '',
+          birthday: parseBirthday(reg.date_naissance),
         })
       } else {
         ;(reg.joueurs as { nom: string; prenom: string; fideId: string; dateNaissance: string }[] ?? []).forEach(j => {
           players.push({
-            no: no++,
+            uid: sno, sno: sno++,
             lastname: j.nom.toUpperCase(),
             firstname: j.prenom,
-            fideId: j.fideId ?? '',
+            fideId: j.fideId || '0',
             club: reg.nom_club ?? '',
-            birthDate: j.dateNaissance ?? '',
+            birthday: parseBirthday(j.dateNaissance),
           })
         })
       }
     })
+
+    // Format exact lu depuis Players.XML (Swiss Manager) :
+    // racine <Players>, une ligne <Tournament Key Name/>, puis <Player .../> avec attributs
     const rows = players.map(p =>
-      `    <Player>\n      <Playeruniqueidentification>${p.no}</Playeruniqueidentification>\n      <Lastname>${escapeXml(p.lastname)}</Lastname>\n      <Firstname>${escapeXml(p.firstname)}</Firstname>\n      <FideId>${escapeXml(p.fideId)}</FideId>\n      <ClubName>${escapeXml(p.club)}</ClubName>\n      <BirthDate>${escapeXml(p.birthDate)}</BirthDate>\n    </Player>`
+      ` <Player PlayerUniqueId="${p.uid}" PlayerSno="${p.sno}"  Lastname="${escapeXml(p.lastname)}" Firstname="${escapeXml(p.firstname)}" AcademicTitle="" Federation="ALG" Rating="0" Birthday="${p.birthday}" Title="" FIDEId="${escapeXml(p.fideId)}" NatId="" NatRating="0" Boardnumber="0" Gender="m" TeamSno="0" TeamUniqueId="0" Type="" Group="" Source="${p.fideId !== '0' ? 'FIDE' : ''}" ClubNo="0" Club="${escapeXml(p.club)}" FIDEFactor="0" />`
     ).join('\n')
-    const xml = `<?xml version="1.0" encoding="UTF-8"?>\n<TournamentList>\n  <Tournament tournamentname="${escapeXml(tournament.title)}">\n    <Playerlist>\n${rows}\n    </Playerlist>\n  </Tournament>\n</TournamentList>`
+
+    const xml = `<?xml version="1.0"?>\n<Players>\n <Tournament Key="1" Name="${escapeXml(tournament.title)}"/>\n${rows}\n</Players>`
     const blob = new Blob([xml], { type: 'application/xml;charset=utf-8' })
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
