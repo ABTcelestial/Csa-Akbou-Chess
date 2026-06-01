@@ -2317,7 +2317,7 @@ const RegistrationsPanel = ({ allTournaments, allRegistrations, loading, deleteC
             </div>
           </div>
           {/* Carte — scrollable si trop haute */}
-          <div className="overflow-auto flex-1 min-h-0 p-4 flex justify-center items-start">
+          <div className="overflow-auto flex-1 min-h-0 p-4 flex flex-col items-center">
             <ConfirmationCard
               registration={cardReg}
               tournament={{ title: cardTournament.title, date: cardTournament.date, location: cardTournament.location, type: cardTournament.type }}

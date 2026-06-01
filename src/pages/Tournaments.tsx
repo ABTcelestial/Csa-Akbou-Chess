@@ -396,7 +396,7 @@ const TournamentModal = ({ tournament, onClose, onOpenLightbox }: {
               </div>
 
               {/* Fiche de confirmation — scrollable via le modal */}
-              <div className="overflow-x-auto -mx-4 px-4 md:mx-0 md:px-0">
+              <div style={{ overflowX: 'auto' }}>
                 <ConfirmationCard
                   registration={savedRegistration}
                   tournament={{ title: tournament.title, date: tournament.date, location: tournament.location, type: tournament.type }}
