@@ -395,14 +395,12 @@ const TournamentModal = ({ tournament, onClose, onOpenLightbox }: {
                 </div>
               </div>
 
-              {/* Fiche de confirmation — rendue en taille réduite, capturée en haute résolution */}
+              {/* Fiche de confirmation — scrollable via le modal */}
               <div className="overflow-x-auto -mx-4 px-4 md:mx-0 md:px-0">
-                <div style={{ transform: "scale(0.82)", transformOrigin: "top left", width: "calc(100% / 0.82)" }}>
-                  <ConfirmationCard
-                    registration={savedRegistration}
-                    tournament={{ title: tournament.title, date: tournament.date, location: tournament.location, type: tournament.type }}
-                  />
-                </div>
+                <ConfirmationCard
+                  registration={savedRegistration}
+                  tournament={{ title: tournament.title, date: tournament.date, location: tournament.location, type: tournament.type }}
+                />
               </div>
 
               {/* Actions */}

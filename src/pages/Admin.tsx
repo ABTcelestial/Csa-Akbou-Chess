@@ -2181,9 +2181,10 @@ const RegistrationsPanel = ({ allTournaments, allRegistrations, loading, deleteC
     try {
       const { default: html2canvas } = await import('html2canvas')
       const { jsPDF } = await import('jspdf')
-      const el = document.getElementById('confirmation-card-admin')
+      // On utilise la copie hors-écran pour éviter le clipping du modal
+      const el = document.getElementById('confirmation-card-admin-print')
       if (!el) return
-      const canvas = await html2canvas(el, { scale: 2, allowTaint: true, useCORS: false, backgroundColor: '#ffffff', logging: false })
+      const canvas = await html2canvas(el, { scale: 2, allowTaint: true, useCORS: false, backgroundColor: '#ffffff', logging: false, width: el.offsetWidth, height: el.offsetHeight })
       const imgData = canvas.toDataURL('image/png')
       const pdf = new jsPDF({ orientation: 'portrait', unit: 'pt', format: 'a4' })
       const pageW = pdf.internal.pageSize.getWidth()
@@ -2316,7 +2317,7 @@ const RegistrationsPanel = ({ allTournaments, allRegistrations, loading, deleteC
             </div>
           </div>
           {/* Carte — scrollable si trop haute */}
-          <div className="overflow-auto p-4 flex justify-center">
+          <div className="overflow-auto flex-1 min-h-0 p-4 flex justify-center items-start">
             <ConfirmationCard
               registration={cardReg}
               tournament={{ title: cardTournament.title, date: cardTournament.date, location: cardTournament.location, type: cardTournament.type }}
@@ -2324,6 +2325,20 @@ const RegistrationsPanel = ({ allTournaments, allRegistrations, loading, deleteC
             />
           </div>
         </div>
+      </div>
+    )}
+
+    {/* Copie hors-écran pour capture PDF (hors du modal, sans overflow/clipping) */}
+    {cardReg && cardTournament && (
+      <div
+        aria-hidden="true"
+        style={{ position: 'fixed', left: '200vw', top: 0, zIndex: -1, pointerEvents: 'none' }}
+      >
+        <ConfirmationCard
+          registration={cardReg}
+          tournament={{ title: cardTournament.title, date: cardTournament.date, location: cardTournament.location, type: cardTournament.type }}
+          cardId="confirmation-card-admin-print"
+        />
       </div>
     )}
 
