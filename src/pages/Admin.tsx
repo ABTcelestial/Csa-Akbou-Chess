@@ -6,7 +6,7 @@ import {
   Trophy, LogOut, ChevronDown, ChevronUp, FileImage,
   Settings, Image, Megaphone, Loader2,
   LayoutDashboard, ClipboardList, UserCheck, Building2, Calendar, Search, Phone,
-  BarChart2, Globe, TrendingUp, Lock, Unlock, FileText, Download, Upload
+  BarChart2, Globe, TrendingUp, Lock, Unlock, FileText, Download, Upload, FileJson, FileCode2
 } from "lucide-react"
 import { useAuth, useTournaments, usePosts, useGallery, useRegistrations, usePlayers, Registration } from "@/hooks/useSupabase"
 import { useSiteConfig } from "@/lib/SiteConfigContext"
@@ -2634,7 +2634,7 @@ const RegistrationsPanel = ({ allTournaments, allRegistrations, loading, deleteC
                       title="Exporter en XML (Swiss Manager)"
                       className="flex items-center gap-1 px-2 py-1.5 rounded-lg border border-border bg-background hover:bg-muted text-xs font-semibold text-muted-foreground hover:text-foreground transition-colors"
                     >
-                      <Download size={12} />
+                      <FileCode2 size={12} />
                       XML
                     </button>
                     <button
@@ -2642,8 +2642,8 @@ const RegistrationsPanel = ({ allTournaments, allRegistrations, loading, deleteC
                       title="Exporter en JSON (réimport dans un autre tournoi)"
                       className="flex items-center gap-1 px-2 py-1.5 rounded-lg border border-border bg-background hover:bg-muted text-xs font-semibold text-muted-foreground hover:text-foreground transition-colors"
                     >
-                      <Download size={12} />
-                      JSON
+                      <FileJson size={12} />
+                      Export
                     </button>
                     <label
                       title="Importer des inscriptions depuis un fichier JSON"
@@ -2651,8 +2651,8 @@ const RegistrationsPanel = ({ allTournaments, allRegistrations, loading, deleteC
                     >
                       {importingTournamentId === tournament.id
                         ? <Loader2 size={12} className="animate-spin" />
-                        : <Upload size={12} />}
-                      JSON
+                        : <FileJson size={12} />}
+                      Import
                       <input type="file" accept=".json" className="hidden"
                         onChange={e => handleImportTournamentJson(e, tournament.id)} />
                     </label>
@@ -2780,7 +2780,7 @@ const RegistrationsPanel = ({ allTournaments, allRegistrations, loading, deleteC
                                     </button>
                                     <button onClick={() => exportRegistrationJson(r)} title="Exporter les joueurs en JSON"
                                       className="text-muted-foreground hover:text-primary transition-colors p-1.5 rounded-lg hover:bg-primary/10">
-                                      <Download size={14} />
+                                      <FileJson size={14} />
                                     </button>
                                     <button
                                       onClick={() => editingRegId === r.id ? setEditingRegId(null) : startEdit(r)}
@@ -2807,7 +2807,7 @@ const RegistrationsPanel = ({ allTournaments, allRegistrations, loading, deleteC
                                     <div className="flex items-center justify-between">
                                       <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Modifier les joueurs</p>
                                       <label className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg border text-xs font-medium cursor-pointer hover:bg-muted text-muted-foreground transition-colors">
-                                        <Upload size={11} />
+                                        <FileJson size={11} />
                                         Importer JSON
                                         <input type="file" accept=".json" className="hidden" onChange={handleImportJson} />
                                       </label>
@@ -2907,7 +2907,7 @@ const RegistrationsPanel = ({ allTournaments, allRegistrations, loading, deleteC
                             Nouvelle inscription club
                           </p>
                           <label className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg border text-xs font-medium cursor-pointer hover:bg-muted text-muted-foreground transition-colors">
-                            <Upload size={11} /> Importer JSON
+                            <FileJson size={11} /> Importer JSON
                             <input type="file" accept=".json" className="hidden" onChange={handleImportJsonNew} />
                           </label>
                         </div>
