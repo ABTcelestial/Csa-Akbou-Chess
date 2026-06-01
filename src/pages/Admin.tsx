@@ -6,7 +6,7 @@ import {
   Trophy, LogOut, ChevronDown, ChevronUp, FileImage,
   Settings, Image, Megaphone, Loader2,
   LayoutDashboard, ClipboardList, UserCheck, Building2, Calendar, Search, Phone,
-  BarChart2, Globe, TrendingUp, Lock, Unlock, FileText, Download
+  BarChart2, Globe, TrendingUp, Lock, Unlock, FileText, Download, Upload
 } from "lucide-react"
 import { useAuth, useTournaments, usePosts, useGallery, useRegistrations, usePlayers, Registration } from "@/hooks/useSupabase"
 import { useSiteConfig } from "@/lib/SiteConfigContext"
@@ -2149,6 +2149,7 @@ interface RegPanelProps {
   deleteConfirm: string | null
   setDeleteConfirm: (id: string | null) => void
   onDelete: (id: string) => Promise<void>
+  onUpdate: (id: string, patch: Partial<Omit<Registration, 'id' | 'created_at'>>) => Promise<void>
 }
 
 // Surligne les occurrences du terme de recherche dans un texte
@@ -2166,11 +2167,14 @@ const Highlight = ({ text, query }: { text: string; query: string }) => {
   )
 }
 
-const RegistrationsPanel = ({ allTournaments, allRegistrations, loading, deleteConfirm, setDeleteConfirm, onDelete }: RegPanelProps) => {
+const RegistrationsPanel = ({ allTournaments, allRegistrations, loading, deleteConfirm, setDeleteConfirm, onDelete, onUpdate }: RegPanelProps) => {
   const [subTab, setSubTab] = useState<'active' | 'history'>('active')
   const [regSearch, setRegSearch] = useState('')
   const [cardReg, setCardReg] = useState<Registration | null>(null)
   const [downloading, setDownloading] = useState(false)
+  const [editingRegId, setEditingRegId] = useState<string | null>(null)
+  const [editJoueurs, setEditJoueurs] = useState<{nom:string;prenom:string;fideId:string;dateNaissance:string}[]>([])
+  const [savingReg, setSavingReg] = useState(false)
 
   const cardTournament = cardReg
     ? allTournaments.find(t => t.id === cardReg.tournament_id)
@@ -2201,6 +2205,86 @@ const RegistrationsPanel = ({ allTournaments, allRegistrations, loading, deleteC
     } catch {
       toast.error('Erreur lors du téléchargement')
     } finally { setDownloading(false) }
+  }
+
+  // ── Masque de date DD/MM/AAAA ──────────────────────────────────
+  const maskDate = (raw: string): string => {
+    const d = raw.replace(/\D/g, '').slice(0, 8)
+    if (d.length <= 2) return d
+    if (d.length <= 4) return `${d.slice(0,2)}/${d.slice(2)}`
+    return `${d.slice(0,2)}/${d.slice(2,4)}/${d.slice(4)}`
+  }
+
+  // ── Edit club registration ──────────────────────────────────────
+  const startEdit = (reg: Registration) => {
+    const j = (reg.joueurs as {nom:string;prenom:string;fideId:string;dateNaissance:string}[] || [])
+      .map(x => ({ nom: x.nom||'', prenom: x.prenom||'', fideId: x.fideId||'', dateNaissance: (x as any).dateNaissance||'' }))
+    setEditJoueurs(j.length > 0 ? j : [{ nom:'', prenom:'', fideId:'', dateNaissance:'' }])
+    setEditingRegId(reg.id)
+  }
+
+  const handleSaveEditedReg = async (regId: string) => {
+    setSavingReg(true)
+    try {
+      await onUpdate(regId, { joueurs: editJoueurs })
+      setEditingRegId(null)
+      toast.success('Inscription mise à jour ✓')
+    } catch { toast.error('Erreur lors de la sauvegarde') }
+    finally { setSavingReg(false) }
+  }
+
+  const handleImportJson = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    const reader = new FileReader()
+    reader.onload = (ev) => {
+      try {
+        const raw = JSON.parse(ev.target?.result as string)
+        const arr: {nom?:string;prenom?:string;fideId?:string;dateNaissance?:string}[] =
+          Array.isArray(raw) ? raw : (raw.joueurs || [])
+        const joueurs = arr.map(p => ({
+          nom: p.nom || '',
+          prenom: p.prenom || '',
+          fideId: p.fideId || '',
+          dateNaissance: p.dateNaissance || '',
+        }))
+        setEditJoueurs(joueurs)
+        toast.success(`${joueurs.length} joueur(s) importés`)
+      } catch { toast.error('Fichier JSON invalide') }
+      e.target.value = ''
+    }
+    reader.readAsText(file)
+  }
+
+  // ── JSON exports ────────────────────────────────────────────────
+  const exportRegistrationJson = (reg: Registration) => {
+    const joueurs = (reg.joueurs as {nom:string;prenom:string;fideId:string;dateNaissance:string}[] || [])
+      .map(j => ({ prenom: j.prenom||'', nom: j.nom||'', fideId: j.fideId||'', dateNaissance: (j as any).dateNaissance||'' }))
+    const blob = new Blob([JSON.stringify(joueurs, null, 2)], { type: 'application/json' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a'); a.href = url
+    a.download = `joueurs-${(reg.nom_club||'club').replace(/\s+/g,'-')}.json`
+    a.click(); URL.revokeObjectURL(url)
+  }
+
+  const exportTournamentJson = (tournament: Tournament, registrations: Registration[]) => {
+    const tournRegs = registrations.filter(r => r.tournament_id === tournament.id)
+    const players: {prenom:string;nom:string;fideId:string;dateNaissance:string;club:string}[] = []
+    tournRegs.forEach(reg => {
+      if (reg.type === 'solo') {
+        players.push({ prenom: reg.prenom||'', nom: reg.nom||'', fideId: reg.fide_id||'', dateNaissance: reg.date_naissance||'', club: reg.club||'' })
+      } else {
+        ;(reg.joueurs as {nom:string;prenom:string;fideId:string;dateNaissance:string}[] || []).forEach(j =>
+          players.push({ prenom: j.prenom||'', nom: j.nom||'', fideId: j.fideId||'', dateNaissance: (j as any).dateNaissance||'', club: reg.nom_club||'' })
+        )
+      }
+    })
+    const payload = { tournoi: tournament.title, date: tournament.date, joueurs: players }
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a'); a.href = url
+    a.download = `joueurs-${tournament.title.toLowerCase().replace(/\s+/g,'-').replace(/[^a-z0-9-]/g,'')}.json`
+    a.click(); URL.revokeObjectURL(url)
   }
 
   const escapeXml = (str: string) =>
@@ -2431,11 +2515,19 @@ const RegistrationsPanel = ({ allTournaments, allRegistrations, loading, deleteC
                   <div className="flex items-center gap-2 shrink-0 ml-2">
                     <button
                       onClick={() => exportTournamentXml(tournament, allRegistrations)}
-                      title="Exporter la liste en XML (Swiss Manager)"
+                      title="Exporter en XML (Swiss Manager)"
                       className="flex items-center gap-1 px-2 py-1.5 rounded-lg border border-border bg-background hover:bg-muted text-xs font-semibold text-muted-foreground hover:text-foreground transition-colors"
                     >
                       <Download size={12} />
                       XML
+                    </button>
+                    <button
+                      onClick={() => exportTournamentJson(tournament, allRegistrations)}
+                      title="Exporter en JSON (réimport dans un autre tournoi)"
+                      className="flex items-center gap-1 px-2 py-1.5 rounded-lg border border-border bg-background hover:bg-muted text-xs font-semibold text-muted-foreground hover:text-foreground transition-colors"
+                    >
+                      <Download size={12} />
+                      JSON
                     </button>
                     <div className="text-right">
                       <p className="text-xl sm:text-2xl font-bold" style={{ color: "hsl(var(--chess-blue))" }}>{regs.length}</p>
@@ -2559,6 +2651,16 @@ const RegistrationsPanel = ({ allTournaments, allRegistrations, loading, deleteC
                                       className="text-muted-foreground hover:text-primary transition-colors p-1.5 rounded-lg hover:bg-primary/10">
                                       <FileText size={14} />
                                     </button>
+                                    <button onClick={() => exportRegistrationJson(r)} title="Exporter les joueurs en JSON"
+                                      className="text-muted-foreground hover:text-primary transition-colors p-1.5 rounded-lg hover:bg-primary/10">
+                                      <Download size={14} />
+                                    </button>
+                                    <button
+                                      onClick={() => editingRegId === r.id ? setEditingRegId(null) : startEdit(r)}
+                                      title={editingRegId === r.id ? 'Annuler la modification' : 'Modifier les joueurs'}
+                                      className={`transition-colors p-1.5 rounded-lg ${editingRegId === r.id ? 'text-primary bg-primary/10' : 'text-muted-foreground hover:text-primary hover:bg-primary/10'}`}>
+                                      <Pencil size={14} />
+                                    </button>
                                     {deleteConfirm === r.id ? (
                                       <div className="flex gap-1">
                                         <button onClick={async () => { try { await onDelete(r.id); setDeleteConfirm(null); toast.success("Inscription supprimée") } catch { toast.error("Erreur lors de la suppression") } }}
@@ -2572,7 +2674,63 @@ const RegistrationsPanel = ({ allTournaments, allRegistrations, loading, deleteC
                                     )}
                                   </div>
                                 </div>
-                                {joueurs.length > 0 && (
+                                {editingRegId === r.id ? (
+                                  /* ── Mode édition ── */
+                                  <div className="p-4 space-y-3 border-t">
+                                    <div className="flex items-center justify-between">
+                                      <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Modifier les joueurs</p>
+                                      <label className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg border text-xs font-medium cursor-pointer hover:bg-muted text-muted-foreground transition-colors">
+                                        <Upload size={11} />
+                                        Importer JSON
+                                        <input type="file" accept=".json" className="hidden" onChange={handleImportJson} />
+                                      </label>
+                                    </div>
+                                    <div className="space-y-2">
+                                      {editJoueurs.map((j, idx) => (
+                                        <div key={idx} className="bg-muted/30 rounded-xl p-2 space-y-1.5">
+                                          <div className="flex gap-1.5 items-center">
+                                            <span className="text-xs font-bold text-muted-foreground w-5 text-center shrink-0">{idx+1}</span>
+                                            <input placeholder="Nom *" value={j.nom}
+                                              onChange={e => setEditJoueurs(prev => prev.map((x,i) => i===idx ? {...x, nom: e.target.value} : x))}
+                                              className="flex-1 border rounded-lg px-2 py-1.5 text-xs bg-background focus:outline-none min-w-0" />
+                                            <input placeholder="Prénom *" value={j.prenom}
+                                              onChange={e => setEditJoueurs(prev => prev.map((x,i) => i===idx ? {...x, prenom: e.target.value} : x))}
+                                              className="flex-1 border rounded-lg px-2 py-1.5 text-xs bg-background focus:outline-none min-w-0" />
+                                            <button onClick={() => setEditJoueurs(prev => prev.filter((_,i) => i!==idx))}
+                                              className="text-muted-foreground hover:text-red-500 p-1 shrink-0"><Trash2 size={12} /></button>
+                                          </div>
+                                          <div className="flex gap-1.5 items-center pl-[26px]">
+                                            <input placeholder="FIDE ID" value={j.fideId}
+                                              onChange={e => setEditJoueurs(prev => prev.map((x,i) => i===idx ? {...x, fideId: e.target.value} : x))}
+                                              className="w-24 border rounded-lg px-2 py-1.5 text-xs bg-background focus:outline-none" />
+                                            <input placeholder="JJ/MM/AAAA" inputMode="numeric" maxLength={10} value={j.dateNaissance}
+                                              onChange={e => setEditJoueurs(prev => prev.map((x,i) => i===idx ? {...x, dateNaissance: maskDate(e.target.value)} : x))}
+                                              className={`flex-1 border rounded-lg px-2 py-1.5 text-xs bg-background focus:outline-none ${j.dateNaissance.length < 10 ? 'border-orange-300' : 'border-border'}`} />
+                                          </div>
+                                        </div>
+                                      ))}
+                                    </div>
+                                    <button onClick={() => setEditJoueurs(prev => [...prev, {nom:'',prenom:'',fideId:'',dateNaissance:''}])}
+                                      className="flex items-center gap-1.5 text-xs font-semibold" style={{ color: "hsl(var(--chess-blue))" }}>
+                                      <Plus size={14} /> Ajouter un joueur
+                                    </button>
+                                    <div className="flex gap-2 pt-1">
+                                      <button
+                                        onClick={() => handleSaveEditedReg(r.id)}
+                                        disabled={savingReg || editJoueurs.some(j => !j.nom || !j.prenom || j.dateNaissance.length < 10)}
+                                        className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs font-bold text-white disabled:opacity-50 transition-all"
+                                        style={{ background: "hsl(var(--chess-blue))" }}>
+                                        {savingReg ? <Loader2 size={13} className="animate-spin" /> : <Save size={13} />}
+                                        {savingReg ? 'Sauvegarde…' : 'Sauvegarder'}
+                                      </button>
+                                      <button onClick={() => setEditingRegId(null)}
+                                        className="px-4 py-2 rounded-xl text-xs font-medium border hover:bg-muted transition-colors">
+                                        Annuler
+                                      </button>
+                                    </div>
+                                  </div>
+                                ) : joueurs.length > 0 ? (
+                                  /* ── Mode lecture ── */
                                   <table className="w-full text-sm">
                                     <thead>
                                       <tr className="border-b bg-muted/20">
@@ -2601,7 +2759,7 @@ const RegistrationsPanel = ({ allTournaments, allRegistrations, loading, deleteC
                                       })}
                                     </tbody>
                                   </table>
-                                )}
+                                ) : null}
                                 <div className="px-4 py-2 bg-muted/10 text-right border-t">
                                   <span className="text-[10px] text-muted-foreground">
                                     Inscrit le {new Date(r.created_at).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}
@@ -2639,7 +2797,7 @@ const Admin = () => {
 
   const { data: allTournaments, loading: tLoading, create: createT, update: updateT, remove: removeT, loadForEdit: loadTournamentForEdit } = useTournaments()
   const { data: posts, loading: pLoading, create: createPost, update: updatePost, remove: removePost } = usePosts()
-  const { data: allRegistrations, loading: rLoading, remove: removeReg } = useRegistrations()
+  const { data: allRegistrations, loading: rLoading, remove: removeReg, update: updateReg } = useRegistrations()
   const { data: allPlayers, loading: playersLoading, create: createPlayer, update: updatePlayer, remove: removePlayer } = usePlayers()
   const [editPlayer, setEditPlayer] = useState<Player | null | 'new'>(null)
   const [playerFormMode, setPlayerFormMode] = useState<'athlete' | 'member'>('athlete')
@@ -2869,6 +3027,7 @@ const Admin = () => {
               deleteConfirm={deleteConfirm}
               setDeleteConfirm={setDeleteConfirm}
               onDelete={removeReg}
+              onUpdate={updateReg}
             />
           )}
 

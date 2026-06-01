@@ -399,7 +399,14 @@ export function useRegistrations(tournamentId?: string) {
     setData(prev => prev.filter(x => x.id !== id))
   }
 
-  return { data, loading, remove, refetch: fetch }
+  const update = async (id: string, patch: Partial<Omit<Registration, 'id' | 'created_at'>>) => {
+    const { error } = await supabase
+      .from('registrations').update(patch).eq('id', id)
+    if (error) throw error
+    setData(prev => prev.map(r => r.id === id ? { ...r, ...patch } : r))
+  }
+
+  return { data, loading, remove, update, refetch: fetch }
 }
 
 // ── Players ──────────────────────────────────────────────────────
