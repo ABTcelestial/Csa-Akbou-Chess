@@ -2343,6 +2343,14 @@ const RegistrationsPanel = ({ allTournaments, allRegistrations, loading, deleteC
           nom: p.nom||'', prenom: p.prenom||'',
           fideId: p.fideId||'', dateNaissance: p.dateNaissance||'',
         })))
+        if (!Array.isArray(raw)) {
+          setNewClubForm(f => ({
+            nomClub:     raw.nom_club    || f.nomClub,
+            responsable: raw.responsable || f.responsable,
+            telephone:   raw.telephone   || f.telephone,
+            email:       raw.email       || f.email,
+          }))
+        }
         toast.success(`${arr.length} joueur(s) importés`)
       } catch { toast.error('Fichier JSON invalide') }
       e.target.value = ''
