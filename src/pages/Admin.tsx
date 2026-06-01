@@ -2207,13 +2207,14 @@ const RegistrationsPanel = ({ allTournaments, allRegistrations, loading, deleteC
 
   const exportTournamentXml = (tournament: Tournament, registrations: Registration[]) => {
     const tournRegs = registrations.filter(r => r.tournament_id === tournament.id)
-    const players: { no: number; name: string; fideId: string; club: string; birthDate: string }[] = []
+    const players: { no: number; lastname: string; firstname: string; fideId: string; club: string; birthDate: string }[] = []
     let no = 1
     tournRegs.forEach(reg => {
       if (reg.type === 'solo') {
         players.push({
           no: no++,
-          name: `${(reg.nom ?? '').toUpperCase()} ${reg.prenom ?? ''}`.trim(),
+          lastname: (reg.nom ?? '').toUpperCase(),
+          firstname: reg.prenom ?? '',
           fideId: reg.fide_id ?? '',
           club: reg.club ?? '',
           birthDate: reg.date_naissance ?? '',
@@ -2222,7 +2223,8 @@ const RegistrationsPanel = ({ allTournaments, allRegistrations, loading, deleteC
         ;(reg.joueurs as { nom: string; prenom: string; fideId: string; dateNaissance: string }[] ?? []).forEach(j => {
           players.push({
             no: no++,
-            name: `${j.nom.toUpperCase()} ${j.prenom}`.trim(),
+            lastname: j.nom.toUpperCase(),
+            firstname: j.prenom,
             fideId: j.fideId ?? '',
             club: reg.nom_club ?? '',
             birthDate: j.dateNaissance ?? '',
@@ -2231,9 +2233,9 @@ const RegistrationsPanel = ({ allTournaments, allRegistrations, loading, deleteC
       }
     })
     const rows = players.map(p =>
-      `    <Player>\n      <No>${p.no}</No>\n      <Name>${escapeXml(p.name)}</Name>\n      <FideId>${escapeXml(p.fideId)}</FideId>\n      <ClubName>${escapeXml(p.club)}</ClubName>\n      <BirthDate>${escapeXml(p.birthDate)}</BirthDate>\n    </Player>`
+      `    <Player>\n      <Playeruniqueidentification>${p.no}</Playeruniqueidentification>\n      <Lastname>${escapeXml(p.lastname)}</Lastname>\n      <Firstname>${escapeXml(p.firstname)}</Firstname>\n      <FideId>${escapeXml(p.fideId)}</FideId>\n      <ClubName>${escapeXml(p.club)}</ClubName>\n      <BirthDate>${escapeXml(p.birthDate)}</BirthDate>\n    </Player>`
     ).join('\n')
-    const xml = `<?xml version="1.0" encoding="UTF-8"?>\n<TournamentList>\n  <Tournament tournamentname="${escapeXml(tournament.title)}">\n    <Players>\n${rows}\n    </Players>\n  </Tournament>\n</TournamentList>`
+    const xml = `<?xml version="1.0" encoding="UTF-8"?>\n<TournamentList>\n  <Tournament tournamentname="${escapeXml(tournament.title)}">\n    <Playerlist>\n${rows}\n    </Playerlist>\n  </Tournament>\n</TournamentList>`
     const blob = new Blob([xml], { type: 'application/xml;charset=utf-8' })
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
