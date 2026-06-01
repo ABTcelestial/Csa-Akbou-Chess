@@ -406,7 +406,17 @@ export function useRegistrations(tournamentId?: string) {
     setData(prev => prev.map(r => r.id === id ? { ...r, ...patch } : r))
   }
 
-  return { data, loading, remove, update, refetch: fetch }
+  const create = async (data: Omit<Registration, 'id' | 'created_at'>): Promise<Registration> => {
+    const id = crypto.randomUUID()
+    const created_at = new Date().toISOString()
+    const { error } = await supabase.from('registrations').insert({ ...data, id })
+    if (error) throw error
+    const reg = { ...data, id, created_at } as Registration
+    setData(prev => [reg, ...prev])
+    return reg
+  }
+
+  return { data, loading, remove, update, create, refetch: fetch }
 }
 
 // ── Players ──────────────────────────────────────────────────────

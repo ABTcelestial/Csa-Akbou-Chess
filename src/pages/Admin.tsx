@@ -2150,6 +2150,7 @@ interface RegPanelProps {
   setDeleteConfirm: (id: string | null) => void
   onDelete: (id: string) => Promise<void>
   onUpdate: (id: string, patch: Partial<Omit<Registration, 'id' | 'created_at'>>) => Promise<void>
+  onCreate: (data: Omit<Registration, 'id' | 'created_at'>) => Promise<Registration>
 }
 
 // Surligne les occurrences du terme de recherche dans un texte
@@ -2167,7 +2168,10 @@ const Highlight = ({ text, query }: { text: string; query: string }) => {
   )
 }
 
-const RegistrationsPanel = ({ allTournaments, allRegistrations, loading, deleteConfirm, setDeleteConfirm, onDelete, onUpdate }: RegPanelProps) => {
+const EMPTY_JOUEUR = { nom:'', prenom:'', fideId:'', dateNaissance:'' }
+const EMPTY_CLUB_FORM = { nomClub:'', responsable:'', telephone:'', email:'' }
+
+const RegistrationsPanel = ({ allTournaments, allRegistrations, loading, deleteConfirm, setDeleteConfirm, onDelete, onUpdate, onCreate }: RegPanelProps) => {
   const [subTab, setSubTab] = useState<'active' | 'history'>('active')
   const [regSearch, setRegSearch] = useState('')
   const [cardReg, setCardReg] = useState<Registration | null>(null)
@@ -2175,6 +2179,11 @@ const RegistrationsPanel = ({ allTournaments, allRegistrations, loading, deleteC
   const [editingRegId, setEditingRegId] = useState<string | null>(null)
   const [editJoueurs, setEditJoueurs] = useState<{nom:string;prenom:string;fideId:string;dateNaissance:string}[]>([])
   const [savingReg, setSavingReg] = useState(false)
+  // ── Ajout d'une inscription club ──────────────────────────────
+  const [addingToTournamentId, setAddingToTournamentId] = useState<string | null>(null)
+  const [newClubForm, setNewClubForm] = useState(EMPTY_CLUB_FORM)
+  const [newJoueurs, setNewJoueurs] = useState([{ ...EMPTY_JOUEUR }])
+  const [savingNew, setSavingNew] = useState(false)
 
   const cardTournament = cardReg
     ? allTournaments.find(t => t.id === cardReg.tournament_id)
@@ -2285,6 +2294,47 @@ const RegistrationsPanel = ({ allTournaments, allRegistrations, loading, deleteC
     const a = document.createElement('a'); a.href = url
     a.download = `joueurs-${tournament.title.toLowerCase().replace(/\s+/g,'-').replace(/[^a-z0-9-]/g,'')}.json`
     a.click(); URL.revokeObjectURL(url)
+  }
+
+  // ── Créer inscription club ──────────────────────────────────────
+  const handleSaveNewClub = async (tournamentId: string) => {
+    setSavingNew(true)
+    try {
+      await onCreate({
+        tournament_id: tournamentId,
+        type: 'club',
+        nom_club: newClubForm.nomClub,
+        responsable: newClubForm.responsable,
+        telephone: newClubForm.telephone || undefined,
+        email: newClubForm.email || undefined,
+        joueurs: newJoueurs,
+      })
+      setAddingToTournamentId(null)
+      setNewClubForm(EMPTY_CLUB_FORM)
+      setNewJoueurs([{ ...EMPTY_JOUEUR }])
+      toast.success('Inscription club ajoutée ✓')
+    } catch { toast.error('Erreur lors de l\'ajout') }
+    finally { setSavingNew(false) }
+  }
+
+  const handleImportJsonNew = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    const reader = new FileReader()
+    reader.onload = (ev) => {
+      try {
+        const raw = JSON.parse(ev.target?.result as string)
+        const arr: {nom?:string;prenom?:string;fideId?:string;dateNaissance?:string}[] =
+          Array.isArray(raw) ? raw : (raw.joueurs || [])
+        setNewJoueurs(arr.map(p => ({
+          nom: p.nom||'', prenom: p.prenom||'',
+          fideId: p.fideId||'', dateNaissance: p.dateNaissance||'',
+        })))
+        toast.success(`${arr.length} joueur(s) importés`)
+      } catch { toast.error('Fichier JSON invalide') }
+      e.target.value = ''
+    }
+    reader.readAsText(file)
   }
 
   const escapeXml = (str: string) =>
@@ -2771,6 +2821,104 @@ const RegistrationsPanel = ({ allTournaments, allRegistrations, loading, deleteC
                         </div>
                       </div>
                     )}
+
+                    {/* ── Bouton + formulaire ajout club ── */}
+                    {addingToTournamentId === tournament.id ? (
+                      <div className="border-2 border-dashed border-primary/30 rounded-2xl p-4 space-y-3 bg-primary/[0.02]">
+                        <div className="flex items-center justify-between">
+                          <p className="text-xs font-bold uppercase tracking-wide" style={{ color: "hsl(var(--chess-blue))" }}>
+                            Nouvelle inscription club
+                          </p>
+                          <label className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg border text-xs font-medium cursor-pointer hover:bg-muted text-muted-foreground transition-colors">
+                            <Upload size={11} /> Importer JSON
+                            <input type="file" accept=".json" className="hidden" onChange={handleImportJsonNew} />
+                          </label>
+                        </div>
+                        {/* Infos club */}
+                        <div className="grid grid-cols-2 gap-2">
+                          <div className="col-span-2 sm:col-span-1">
+                            <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide block mb-1">Nom du club *</label>
+                            <input value={newClubForm.nomClub} onChange={e => setNewClubForm(f => ({...f, nomClub: e.target.value}))}
+                              placeholder="CSA Akbou Chess" className="w-full border rounded-lg px-3 py-2 text-sm bg-background focus:outline-none focus:ring-2 focus:ring-primary/20" />
+                          </div>
+                          <div className="col-span-2 sm:col-span-1">
+                            <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide block mb-1">Responsable *</label>
+                            <input value={newClubForm.responsable} onChange={e => setNewClubForm(f => ({...f, responsable: e.target.value}))}
+                              placeholder="Nom du responsable" className="w-full border rounded-lg px-3 py-2 text-sm bg-background focus:outline-none focus:ring-2 focus:ring-primary/20" />
+                          </div>
+                          <div>
+                            <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide block mb-1">Téléphone</label>
+                            <input type="tel" value={newClubForm.telephone} onChange={e => setNewClubForm(f => ({...f, telephone: e.target.value}))}
+                              placeholder="0555 00 00 00" className="w-full border rounded-lg px-3 py-2 text-sm bg-background focus:outline-none focus:ring-2 focus:ring-primary/20" />
+                          </div>
+                          <div>
+                            <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide block mb-1">Email</label>
+                            <input type="email" value={newClubForm.email} onChange={e => setNewClubForm(f => ({...f, email: e.target.value}))}
+                              placeholder="contact@club.dz" className="w-full border rounded-lg px-3 py-2 text-sm bg-background focus:outline-none focus:ring-2 focus:ring-primary/20" />
+                          </div>
+                        </div>
+                        {/* Liste joueurs */}
+                        <div>
+                          <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide mb-2">
+                            Joueurs — {newJoueurs.length}
+                          </p>
+                          <div className="space-y-2">
+                            {newJoueurs.map((j, idx) => (
+                              <div key={idx} className="bg-muted/30 rounded-xl p-2 space-y-1.5">
+                                <div className="flex gap-1.5 items-center">
+                                  <span className="text-xs font-bold text-muted-foreground w-5 text-center shrink-0">{idx+1}</span>
+                                  <input placeholder="Nom *" value={j.nom}
+                                    onChange={e => setNewJoueurs(prev => prev.map((x,i) => i===idx ? {...x, nom: e.target.value} : x))}
+                                    className="flex-1 border rounded-lg px-2 py-1.5 text-xs bg-background focus:outline-none min-w-0" />
+                                  <input placeholder="Prénom *" value={j.prenom}
+                                    onChange={e => setNewJoueurs(prev => prev.map((x,i) => i===idx ? {...x, prenom: e.target.value} : x))}
+                                    className="flex-1 border rounded-lg px-2 py-1.5 text-xs bg-background focus:outline-none min-w-0" />
+                                  {newJoueurs.length > 1 && (
+                                    <button onClick={() => setNewJoueurs(prev => prev.filter((_,i) => i!==idx))}
+                                      className="text-muted-foreground hover:text-red-500 p-1 shrink-0"><Trash2 size={12} /></button>
+                                  )}
+                                </div>
+                                <div className="flex gap-1.5 items-center pl-[26px]">
+                                  <input placeholder="FIDE ID" value={j.fideId}
+                                    onChange={e => setNewJoueurs(prev => prev.map((x,i) => i===idx ? {...x, fideId: e.target.value} : x))}
+                                    className="w-24 border rounded-lg px-2 py-1.5 text-xs bg-background focus:outline-none" />
+                                  <input placeholder="JJ/MM/AAAA" inputMode="numeric" maxLength={10} value={j.dateNaissance}
+                                    onChange={e => setNewJoueurs(prev => prev.map((x,i) => i===idx ? {...x, dateNaissance: maskDate(e.target.value)} : x))}
+                                    className={`flex-1 border rounded-lg px-2 py-1.5 text-xs bg-background focus:outline-none ${j.dateNaissance.length > 0 && j.dateNaissance.length < 10 ? 'border-orange-300' : 'border-border'}`} />
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                          <button onClick={() => setNewJoueurs(prev => [...prev, { ...EMPTY_JOUEUR }])}
+                            className="mt-2 flex items-center gap-1.5 text-xs font-semibold" style={{ color: "hsl(var(--chess-blue))" }}>
+                            <Plus size={14} /> Ajouter un joueur
+                          </button>
+                        </div>
+                        {/* Actions */}
+                        <div className="flex gap-2 pt-1">
+                          <button
+                            onClick={() => handleSaveNewClub(tournament.id)}
+                            disabled={savingNew || !newClubForm.nomClub || !newClubForm.responsable || newJoueurs.some(j => !j.nom || !j.prenom || j.dateNaissance.length < 10)}
+                            className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-sm font-bold text-white disabled:opacity-50 transition-all"
+                            style={{ background: "hsl(var(--chess-blue))" }}>
+                            {savingNew ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
+                            {savingNew ? 'Enregistrement…' : 'Enregistrer l\'inscription'}
+                          </button>
+                          <button
+                            onClick={() => { setAddingToTournamentId(null); setNewClubForm(EMPTY_CLUB_FORM); setNewJoueurs([{ ...EMPTY_JOUEUR }]) }}
+                            className="px-5 py-2.5 rounded-xl text-sm font-medium border hover:bg-muted transition-colors">
+                            Annuler
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => { setAddingToTournamentId(tournament.id); setNewClubForm(EMPTY_CLUB_FORM); setNewJoueurs([{ ...EMPTY_JOUEUR }]) }}
+                        className="flex items-center gap-2 px-4 py-2.5 rounded-xl border-2 border-dashed border-muted-foreground/20 hover:border-primary/40 text-sm font-medium text-muted-foreground hover:text-primary transition-all w-full justify-center"
+                      >
+                        <Plus size={15} /> Ajouter une inscription club
+                      </button>
+                    )}
                   </div>
                 )}
               </div>
@@ -2797,7 +2945,7 @@ const Admin = () => {
 
   const { data: allTournaments, loading: tLoading, create: createT, update: updateT, remove: removeT, loadForEdit: loadTournamentForEdit } = useTournaments()
   const { data: posts, loading: pLoading, create: createPost, update: updatePost, remove: removePost } = usePosts()
-  const { data: allRegistrations, loading: rLoading, remove: removeReg, update: updateReg } = useRegistrations()
+  const { data: allRegistrations, loading: rLoading, remove: removeReg, update: updateReg, create: createReg } = useRegistrations()
   const { data: allPlayers, loading: playersLoading, create: createPlayer, update: updatePlayer, remove: removePlayer } = usePlayers()
   const [editPlayer, setEditPlayer] = useState<Player | null | 'new'>(null)
   const [playerFormMode, setPlayerFormMode] = useState<'athlete' | 'member'>('athlete')
@@ -3028,6 +3176,7 @@ const Admin = () => {
               setDeleteConfirm={setDeleteConfirm}
               onDelete={removeReg}
               onUpdate={updateReg}
+              onCreate={createReg}
             />
           )}
 
