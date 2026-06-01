@@ -2269,7 +2269,14 @@ const RegistrationsPanel = ({ allTournaments, allRegistrations, loading, deleteC
   const exportRegistrationJson = (reg: Registration) => {
     const joueurs = (reg.joueurs as {nom:string;prenom:string;fideId:string;dateNaissance:string}[] || [])
       .map(j => ({ prenom: j.prenom||'', nom: j.nom||'', fideId: j.fideId||'', dateNaissance: (j as any).dateNaissance||'' }))
-    const blob = new Blob([JSON.stringify(joueurs, null, 2)], { type: 'application/json' })
+    const payload = {
+      nom_club:    reg.nom_club    || '',
+      responsable: reg.responsable || '',
+      telephone:   reg.telephone   || '',
+      email:       reg.email       || '',
+      joueurs,
+    }
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' })
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a'); a.href = url
     a.download = `joueurs-${(reg.nom_club||'club').replace(/\s+/g,'-')}.json`
@@ -2278,17 +2285,23 @@ const RegistrationsPanel = ({ allTournaments, allRegistrations, loading, deleteC
 
   const exportTournamentJson = (tournament: Tournament, registrations: Registration[]) => {
     const tournRegs = registrations.filter(r => r.tournament_id === tournament.id)
-    const players: {prenom:string;nom:string;fideId:string;dateNaissance:string;club:string}[] = []
+    const soloPlayers: {prenom:string;nom:string;fideId:string;dateNaissance:string;club:string}[] = []
+    const clubs: {nom_club:string;responsable:string;telephone:string;email:string;joueurs:{prenom:string;nom:string;fideId:string;dateNaissance:string}[]}[] = []
     tournRegs.forEach(reg => {
       if (reg.type === 'solo') {
-        players.push({ prenom: reg.prenom||'', nom: reg.nom||'', fideId: reg.fide_id||'', dateNaissance: reg.date_naissance||'', club: reg.club||'' })
+        soloPlayers.push({ prenom: reg.prenom||'', nom: reg.nom||'', fideId: reg.fide_id||'', dateNaissance: reg.date_naissance||'', club: reg.club||'' })
       } else {
-        ;(reg.joueurs as {nom:string;prenom:string;fideId:string;dateNaissance:string}[] || []).forEach(j =>
-          players.push({ prenom: j.prenom||'', nom: j.nom||'', fideId: j.fideId||'', dateNaissance: (j as any).dateNaissance||'', club: reg.nom_club||'' })
-        )
+        clubs.push({
+          nom_club:    reg.nom_club    || '',
+          responsable: reg.responsable || '',
+          telephone:   reg.telephone   || '',
+          email:       reg.email       || '',
+          joueurs: (reg.joueurs as {nom:string;prenom:string;fideId:string;dateNaissance:string}[] || [])
+            .map(j => ({ prenom: j.prenom||'', nom: j.nom||'', fideId: j.fideId||'', dateNaissance: (j as any).dateNaissance||'' })),
+        })
       }
     })
-    const payload = { tournoi: tournament.title, date: tournament.date, joueurs: players }
+    const payload = { tournoi: tournament.title, date: tournament.date, clubs, joueurs_individuels: soloPlayers }
     const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' })
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a'); a.href = url
