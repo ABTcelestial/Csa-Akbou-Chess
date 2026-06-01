@@ -2201,6 +2201,47 @@ const RegistrationsPanel = ({ allTournaments, allRegistrations, loading, deleteC
     } finally { setDownloading(false) }
   }
 
+  const escapeXml = (str: string) =>
+    str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
+
+  const exportTournamentXml = (tournament: Tournament, registrations: Registration[]) => {
+    const tournRegs = registrations.filter(r => r.tournament_id === tournament.id)
+    const players: { no: number; name: string; fideId: string; club: string; birthDate: string }[] = []
+    let no = 1
+    tournRegs.forEach(reg => {
+      if (reg.type === 'solo') {
+        players.push({
+          no: no++,
+          name: `${(reg.nom ?? '').toUpperCase()} ${reg.prenom ?? ''}`.trim(),
+          fideId: reg.fide_id ?? '',
+          club: reg.club ?? '',
+          birthDate: reg.date_naissance ?? '',
+        })
+      } else {
+        ;(reg.joueurs as { nom: string; prenom: string; fideId: string; dateNaissance: string }[] ?? []).forEach(j => {
+          players.push({
+            no: no++,
+            name: `${j.nom.toUpperCase()} ${j.prenom}`.trim(),
+            fideId: j.fideId ?? '',
+            club: reg.nom_club ?? '',
+            birthDate: j.dateNaissance ?? '',
+          })
+        })
+      }
+    })
+    const rows = players.map(p =>
+      `    <Player>\n      <No>${p.no}</No>\n      <Name>${escapeXml(p.name)}</Name>\n      <FideId>${escapeXml(p.fideId)}</FideId>\n      <ClubName>${escapeXml(p.club)}</ClubName>\n      <BirthDate>${escapeXml(p.birthDate)}</BirthDate>\n    </Player>`
+    ).join('\n')
+    const xml = `<?xml version="1.0" encoding="UTF-8"?>\n<TournamentList>\n  <Tournament tournamentname="${escapeXml(tournament.title)}">\n    <Players>\n${rows}\n    </Players>\n  </Tournament>\n</TournamentList>`
+    const blob = new Blob([xml], { type: 'application/xml;charset=utf-8' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `inscriptions-${tournament.title.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '')}.xml`
+    a.click()
+    URL.revokeObjectURL(url)
+  }
+
   const activeTournaments   = allTournaments.filter(t => !t.is_past)
   const finishedTournaments = allTournaments.filter(t => t.is_past)
 
@@ -2353,9 +2394,19 @@ const RegistrationsPanel = ({ allTournaments, allRegistrations, loading, deleteC
                       {tournament.location && <><span>·</span><span>{tournament.location}</span></>}
                     </p>
                   </div>
-                  <div className="text-right shrink-0 ml-2">
-                    <p className="text-xl sm:text-2xl font-bold" style={{ color: "hsl(var(--chess-blue))" }}>{regs.length}</p>
-                    <p className="text-xs text-muted-foreground">inscription{regs.length > 1 ? 's' : ''}</p>
+                  <div className="flex items-center gap-2 shrink-0 ml-2">
+                    <button
+                      onClick={() => exportTournamentXml(tournament, allRegistrations)}
+                      title="Exporter la liste en XML (Swiss Manager)"
+                      className="flex items-center gap-1 px-2 py-1.5 rounded-lg border border-border bg-background hover:bg-muted text-xs font-semibold text-muted-foreground hover:text-foreground transition-colors"
+                    >
+                      <Download size={12} />
+                      XML
+                    </button>
+                    <div className="text-right">
+                      <p className="text-xl sm:text-2xl font-bold" style={{ color: "hsl(var(--chess-blue))" }}>{regs.length}</p>
+                      <p className="text-xs text-muted-foreground">inscription{regs.length > 1 ? 's' : ''}</p>
+                    </div>
                   </div>
                 </div>
 
