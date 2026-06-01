@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from "react"
+import { Helmet } from "react-helmet-async"
 import { Link } from "react-router-dom"
 import {
   Plus, Pencil, Trash2, X, Save, ImagePlus, Eye,
@@ -2622,7 +2623,15 @@ const Admin = () => {
     </div>
   )
 
-  if (!user) return <LoginScreen onLogin={signIn} clubName={clubName} isLockedOut={isLockedOut} lockoutMinutes={lockoutMinutes} />
+  if (!user) return (
+    <>
+      <Helmet>
+        <title>Administration — CSA Akbou Chess</title>
+        <meta name="robots" content="noindex, nofollow" />
+      </Helmet>
+      <LoginScreen onLogin={signIn} clubName={clubName} isLockedOut={isLockedOut} lockoutMinutes={lockoutMinutes} />
+    </>
+  )
 
   const upcoming = allTournaments.filter(t => !t.is_past)
   const past = allTournaments.filter(t => t.is_past)
@@ -2677,6 +2686,11 @@ const Admin = () => {
   ]
 
   return (
+    <>
+    <Helmet>
+      <title>Administration — CSA Akbou Chess</title>
+      <meta name="robots" content="noindex, nofollow" />
+    </Helmet>
     <div className="min-h-screen bg-muted/30 flex flex-col">
       <ConnectionBanner status={connectionStatus} onRetry={refetchConfig} />
       {editTournament !== null && (
@@ -2889,6 +2903,7 @@ const Admin = () => {
         />
       )}
     </div>
+    </>
   )
 }
 

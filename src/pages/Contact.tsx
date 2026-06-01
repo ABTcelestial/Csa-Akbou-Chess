@@ -1,5 +1,6 @@
 import Layout from "@/components/Layout";
 import Reveal from "@/components/Reveal";
+import PageSEO from "@/components/PageSEO";
 import { MapPin, Mail, Phone, Clock, ExternalLink, Navigation } from "lucide-react";
 import { useSiteConfig } from "@/lib/SiteConfigContext";
 
@@ -89,8 +90,56 @@ const Contact = () => {
     },
   ];
 
+  const faq = get('faq', []) as { q: string; a: string }[];
+
+  const contactJsonLd = {
+    '@context': 'https://schema.org',
+    '@graph': [
+      {
+        '@type': 'LocalBusiness',
+        name: 'CSA Akbou Chess',
+        url: 'https://csa-akbou-chess.com',
+        email: email || undefined,
+        telephone: phone || undefined,
+        address: address ? {
+          '@type': 'PostalAddress',
+          streetAddress: address,
+          addressLocality: 'Akbou',
+          addressRegion: 'Béjaïa',
+          addressCountry: 'DZ',
+        } : undefined,
+        geo: {
+          '@type': 'GeoCoordinates',
+          latitude: 36.4667,
+          longitude: 4.5333,
+        },
+        openingHoursSpecification: Array.isArray(schedule) ? schedule.map(h => ({
+          '@type': 'OpeningHoursSpecification',
+          description: `${h.day} : ${h.hours}`,
+        })) : undefined,
+      },
+      ...(faq.length > 0 ? [{
+        '@type': 'FAQPage',
+        mainEntity: faq.map(item => ({
+          '@type': 'Question',
+          name: item.q,
+          acceptedAnswer: {
+            '@type': 'Answer',
+            text: item.a,
+          },
+        })),
+      }] : []),
+    ],
+  };
+
   return (
     <Layout>
+      <PageSEO
+        title="Contact — Nous rejoindre"
+        description="Contactez le club d'échecs CSA Akbou à Akbou, Béjaïa. Adresse, horaires des séances, formulaire de contact et FAQ pour rejoindre le club."
+        path="/contact"
+        jsonLd={contactJsonLd}
+      />
       {/* Hero */}
       <section className="py-16 md:py-24 text-white"
         style={{ background: "linear-gradient(135deg, hsl(var(--chess-blue-dark)), hsl(var(--chess-blue)))" }}>

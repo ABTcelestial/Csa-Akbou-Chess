@@ -1,5 +1,6 @@
 import Layout from "@/components/Layout";
 import Reveal from "@/components/Reveal";
+import PageSEO from "@/components/PageSEO";
 import ConfirmationCard from "@/components/ConfirmationCard";
 import { useState, useMemo, useEffect } from "react";
 import { Calendar, Clock, Users, MapPin, X, ChevronRight, UserPlus, Building2, Plus, Trash2, CheckCircle, FileImage, Loader2, Search, Trophy, ChevronLeft, Lock, Link2, Check, Download, Mail } from "lucide-react";
@@ -503,8 +504,42 @@ const Tournaments = () => {
   const totalPastPages = Math.ceil(filteredPast.length / PAST_PER_PAGE);
   const pagedPast = filteredPast.slice(pastPage * PAST_PER_PAGE, (pastPage + 1) * PAST_PER_PAGE);
 
+  const tournamentsJsonLd = upcoming.length > 0 ? {
+    '@context': 'https://schema.org',
+    '@graph': upcoming.map(t => ({
+      '@type': 'SportsEvent',
+      name: t.title,
+      startDate: t.date_iso || undefined,
+      location: {
+        '@type': 'Place',
+        name: t.location || 'Akbou',
+        address: {
+          '@type': 'PostalAddress',
+          addressLocality: 'Akbou',
+          addressRegion: 'Béjaïa',
+          addressCountry: 'DZ',
+        },
+      },
+      organizer: {
+        '@type': 'SportsOrganization',
+        name: 'CSA Akbou Chess',
+        url: 'https://csa-akbou-chess.com',
+      },
+      sport: 'Chess',
+      eventStatus: t.registrations_closed
+        ? 'https://schema.org/EventScheduled'
+        : 'https://schema.org/EventScheduled',
+    })),
+  } : undefined;
+
   return (
     <Layout>
+      <PageSEO
+        title="Tournois d'échecs — Calendrier & Inscriptions"
+        description="Retrouvez tous les tournois homologués du club d'échecs CSA Akbou à Akbou (Béjaïa). Inscriptions en ligne, résultats et fiches techniques."
+        path="/tournois"
+        jsonLd={tournamentsJsonLd}
+      />
       {lightboxData && <Lightbox photos={lightboxData.photos} index={lightboxData.index} onClose={() => setLightboxData(null)} />}
       {selected && <TournamentModal tournament={selected} onClose={closeTournament} onOpenLightbox={(photos, index) => setLightboxData({ photos, index })} />}
 

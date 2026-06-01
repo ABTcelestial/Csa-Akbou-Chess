@@ -1,5 +1,6 @@
 import Layout from "@/components/Layout";
 import Reveal from "@/components/Reveal";
+import PageSEO from "@/components/PageSEO";
 import { useSiteConfig } from "@/lib/SiteConfigContext";
 import { usePlayers } from "@/hooks/useSupabase";
 import { useState, useMemo } from "react";
@@ -66,8 +67,43 @@ const About = () => {
     });
   }, [currentList, searchTerm, filterCat, filterLevel, activeTab]);
 
+  const aboutJsonLd = {
+    '@context': 'https://schema.org',
+    '@graph': [
+      {
+        '@type': 'AboutPage',
+        url: 'https://csa-akbou-chess.com/a-propos',
+        name: `À propos — ${clubName || 'CSA Akbou Chess'}`,
+        description: "Histoire, valeurs et membres du club d'échecs CSA Akbou à Akbou, Béjaïa.",
+        speakable: {
+          '@type': 'SpeakableSpecification',
+          cssSelector: ['h1', 'h2'],
+        },
+      },
+      {
+        '@type': 'SportsOrganization',
+        name: clubName || 'CSA Akbou Chess',
+        url: 'https://csa-akbou-chess.com',
+        sport: 'Chess',
+        foundingDate: founded || undefined,
+        address: {
+          '@type': 'PostalAddress',
+          addressLocality: 'Akbou',
+          addressRegion: 'Béjaïa',
+          addressCountry: 'DZ',
+        },
+      },
+    ],
+  };
+
   return (
     <Layout>
+      <PageSEO
+        title="À propos — Histoire & Équipe"
+        description={`Découvrez l'histoire du club d'échecs ${clubName || 'CSA Akbou'}, ses valeurs, son équipe et ses séances hebdomadaires à Akbou, Béjaïa.`}
+        path="/a-propos"
+        jsonLd={aboutJsonLd}
+      />
       {/* Hero */}
       <section className="py-20 md:py-28 text-white"
         style={{ background: "linear-gradient(135deg, hsl(var(--chess-blue-dark)), hsl(var(--chess-blue)))" }}>

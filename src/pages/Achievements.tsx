@@ -1,5 +1,6 @@
 import Layout from "@/components/Layout";
 import Reveal from "@/components/Reveal";
+import PageSEO from "@/components/PageSEO";
 import { useState, useMemo } from "react";
 import { HelpCircle, ChevronDown, X, Loader2, Search, Calendar, User, Share2, Check } from "lucide-react";
 import { usePosts, useSiteConfig } from "@/hooks/useSupabase";
@@ -289,8 +290,27 @@ const Achievements = () => {
 
   const hasFilters = activeType !== "all" || yearFilter !== null || dateFilter !== "all" || searchQuery.trim() !== "";
 
+  const achievementsJsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'CollectionPage',
+    url: 'https://csa-akbou-chess.com/realisations',
+    name: 'Réalisations — Palmarès & Galerie — CSA Akbou Chess',
+    description: "Palmarès, trophées et galerie photo du club d'échecs CSA Akbou.",
+    isPartOf: {
+      '@type': 'WebSite',
+      url: 'https://csa-akbou-chess.com',
+      name: 'CSA Akbou Chess',
+    },
+  };
+
   return (
     <Layout>
+      <PageSEO
+        title="Réalisations — Palmarès & Galerie"
+        description="Palmarès, trophées et galerie photo du club d'échecs CSA Akbou. Nos joueurs en compétition à travers l'Algérie."
+        path="/realisations"
+        jsonLd={achievementsJsonLd}
+      />
       {/* Lightbox rendue au root — hors de tout overflow:hidden */}
       {lightbox && (
         <Lightbox

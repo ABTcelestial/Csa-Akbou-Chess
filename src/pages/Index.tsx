@@ -1,5 +1,6 @@
 import Layout from "@/components/Layout";
 import Reveal from "@/components/Reveal";
+import PageSEO from "@/components/PageSEO";
 import { Link } from "react-router-dom";
 import { Camera, ArrowRight, ChevronRight, Loader2, Users, Target, Trophy, Calendar, MapPin } from "lucide-react";
 import { useGallery, useSiteConfig, useTournaments, usePlayers } from "@/hooks/useSupabase";
@@ -55,8 +56,60 @@ const Index = () => {
   const pastTournamentsCount = tournaments.filter(t => t.is_past).length;
   const dynamicTournaments = pastTournamentsCount > 0 ? pastTournamentsCount.toString() : tournamentsPerYear;
 
+  const clubAddress  = String(get('club_address', ''));
+  const clubEmail    = String(get('club_email',   ''));
+  const clubPhone    = String(get('club_phone',   ''));
+  const socialFb     = String(get('social_facebook',  '') || '');
+  const socialIg     = String(get('social_instagram', '') || '');
+  const socialYt     = String(get('social_youtube',   '') || '');
+  const clubDesc     = String(get('club_description', "Club d'échecs CSA Akbou à Akbou, Béjaïa. Tournois homologués, cours pour tous niveaux, compétitions officielles."));
+
+  const sameAs = [
+    'https://csa-akbou-chess.com',
+    socialFb, socialIg, socialYt,
+  ].filter(v => v && v !== 'null' && v.startsWith('http'));
+
+  const homeJsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'SportsOrganization',
+    name: clubName || 'CSA Akbou Chess',
+    alternateName: "Club d'échecs CSA Akbou",
+    url: 'https://csa-akbou-chess.com',
+    logo: {
+      '@type': 'ImageObject',
+      url: 'https://csa-akbou-chess.com/og-image.jpg',
+      width: 1200,
+      height: 630,
+    },
+    image: 'https://csa-akbou-chess.com/og-image.jpg',
+    sport: 'Chess',
+    description: clubDesc,
+    foundingDate: founded || undefined,
+    email: clubEmail || undefined,
+    telephone: clubPhone || undefined,
+    address: {
+      '@type': 'PostalAddress',
+      streetAddress: clubAddress || undefined,
+      addressLocality: 'Akbou',
+      addressRegion: 'Béjaïa',
+      addressCountry: 'DZ',
+    },
+    geo: {
+      '@type': 'GeoCoordinates',
+      latitude: 36.4667,
+      longitude: 4.5333,
+    },
+    sameAs,
+  };
+
   return (
     <Layout>
+      <PageSEO
+        title="CSA Akbou Chess — Club d'échecs à Akbou, Béjaïa"
+        description={clubDesc || "Club d'échecs CSA Akbou à Akbou, Béjaïa (Algérie). Tournois homologués FFE, cours pour débutants et compétiteurs, séances hebdomadaires."}
+        path="/"
+        jsonLd={homeJsonLd}
+      />
       {/* ── HERO ── */}
       <section className="relative min-h-[92vh] flex items-center overflow-hidden"
         style={{ background: "linear-gradient(135deg, hsl(var(--chess-blue-dark)) 0%, hsl(var(--chess-blue)) 60%, hsl(var(--chess-blue-mid)) 100%)" }}>

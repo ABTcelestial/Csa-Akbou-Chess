@@ -1,0 +1,13 @@
+{
+  "name": "CSA Akbou Chess",
+  "short_name": "CSA Akbou",
+  "description": "Club d'échecs CSA Akbou à Akbou, Béjaïa (Algérie)",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0f1729",
+  "theme_color": "#1e3a6e",
+  "icons": [
+    { "src": "/favicon-96x96.png", "sizes": "96x96", "type": "image/png" },
+    { "src": "/apple-touch-icon.png", "sizes": "180x180", "type": "image/png" }
+  ]
+}
