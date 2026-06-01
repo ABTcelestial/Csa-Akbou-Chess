@@ -2184,6 +2184,7 @@ const RegistrationsPanel = ({ allTournaments, allRegistrations, loading, deleteC
   const [newClubForm, setNewClubForm] = useState(EMPTY_CLUB_FORM)
   const [newJoueurs, setNewJoueurs] = useState([{ ...EMPTY_JOUEUR }])
   const [savingNew, setSavingNew] = useState(false)
+  const [importingTournamentId, setImportingTournamentId] = useState<string | null>(null)
 
   const cardTournament = cardReg
     ? allTournaments.find(t => t.id === cardReg.tournament_id)
@@ -2353,6 +2354,50 @@ const RegistrationsPanel = ({ allTournaments, allRegistrations, loading, deleteC
         }
         toast.success(`${arr.length} joueur(s) importés`)
       } catch { toast.error('Fichier JSON invalide') }
+      e.target.value = ''
+    }
+    reader.readAsText(file)
+  }
+
+  // ── Import tout un tournoi depuis JSON ──────────────────────────
+  const handleImportTournamentJson = (e: React.ChangeEvent<HTMLInputElement>, tournamentId: string) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    const reader = new FileReader()
+    reader.onload = async (ev) => {
+      setImportingTournamentId(tournamentId)
+      try {
+        const raw = JSON.parse(ev.target?.result as string)
+        let count = 0
+        const clubs: { nom_club?:string; responsable?:string; telephone?:string; email?:string; joueurs?:{ nom:string; prenom:string; fideId:string; dateNaissance:string }[] }[] = raw.clubs || []
+        for (const club of clubs) {
+          await onCreate({
+            tournament_id: tournamentId,
+            type: 'club',
+            nom_club:    club.nom_club    || '',
+            responsable: club.responsable || '',
+            telephone:   club.telephone   || undefined,
+            email:       club.email       || undefined,
+            joueurs:     club.joueurs     || [],
+          })
+          count++
+        }
+        const soloPlayers: { nom?:string; prenom?:string; fideId?:string; dateNaissance?:string; club?:string }[] = raw.joueurs_individuels || []
+        for (const p of soloPlayers) {
+          await onCreate({
+            tournament_id:  tournamentId,
+            type:           'solo',
+            nom:            p.nom           || '',
+            prenom:         p.prenom        || '',
+            fide_id:        p.fideId        || '',
+            date_naissance: p.dateNaissance || '',
+            club:           p.club          || '',
+          })
+          count++
+        }
+        toast.success(`${count} inscription${count > 1 ? 's' : ''} importée${count > 1 ? 's' : ''} ✓`)
+      } catch { toast.error("Erreur lors de l'import du tournoi") }
+      finally { setImportingTournamentId(null) }
       e.target.value = ''
     }
     reader.readAsText(file)
@@ -2600,6 +2645,17 @@ const RegistrationsPanel = ({ allTournaments, allRegistrations, loading, deleteC
                       <Download size={12} />
                       JSON
                     </button>
+                    <label
+                      title="Importer des inscriptions depuis un fichier JSON"
+                      className="flex items-center gap-1 px-2 py-1.5 rounded-lg border border-border bg-background hover:bg-muted text-xs font-semibold text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+                    >
+                      {importingTournamentId === tournament.id
+                        ? <Loader2 size={12} className="animate-spin" />
+                        : <Upload size={12} />}
+                      JSON
+                      <input type="file" accept=".json" className="hidden"
+                        onChange={e => handleImportTournamentJson(e, tournament.id)} />
+                    </label>
                     <div className="text-right">
                       <p className="text-xl sm:text-2xl font-bold" style={{ color: "hsl(var(--chess-blue))" }}>{regs.length}</p>
                       <p className="text-xs text-muted-foreground">inscription{regs.length > 1 ? 's' : ''}</p>
