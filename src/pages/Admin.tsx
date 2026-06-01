@@ -2330,13 +2330,15 @@ const RegistrationsPanel = ({ allTournaments, allRegistrations, loading, deleteC
               </button>
             </div>
           </div>
-          {/* Carte — scrollable si trop haute */}
-          <div className="overflow-auto flex-1 min-h-0 p-4 flex flex-col items-center">
-            <ConfirmationCard
-              registration={cardReg}
-              tournament={{ title: cardTournament.title, date: cardTournament.date, location: cardTournament.location, type: cardTournament.type }}
-              cardId="confirmation-card-admin"
-            />
+          {/* Carte — scroll container block (pas flex) pour éviter conflit overflow/flex */}
+          <div className="overflow-y-auto flex-1 min-h-0 p-4">
+            <div style={{ width: 'fit-content', margin: '0 auto' }}>
+              <ConfirmationCard
+                registration={cardReg}
+                tournament={{ title: cardTournament.title, date: cardTournament.date, location: cardTournament.location, type: cardTournament.type }}
+                cardId="confirmation-card-admin"
+              />
+            </div>
           </div>
         </div>
       </div>
