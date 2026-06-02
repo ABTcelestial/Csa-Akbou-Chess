@@ -93,14 +93,14 @@ const Navbar = () => {
           <button
             onClick={() => setIsDark(d => !d)}
             aria-label={isDark ? "Mode clair" : "Mode sombre"}
-            className="p-2 rounded-lg text-white/60 hover:text-white hover:bg-white/8 transition-colors"
+            className="min-h-[44px] min-w-[44px] flex items-center justify-center rounded-lg text-white/60 hover:text-white hover:bg-white/8 transition-colors"
           >
             {isDark ? <Sun size={18} /> : <Moon size={18} />}
           </button>
 
           {/* Burger mobile */}
           <button onClick={() => setOpen(!open)} aria-label="Menu"
-            className="md:hidden p-2 rounded-lg text-white/70 hover:text-white hover:bg-white/8 transition-colors">
+            className="md:hidden min-h-[44px] min-w-[44px] flex items-center justify-center rounded-lg text-white/70 hover:text-white hover:bg-white/8 transition-colors">
             {open ? <X size={22} /> : <Menu size={22} />}
           </button>
         </div>

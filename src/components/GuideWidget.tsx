@@ -56,11 +56,14 @@ function useArrow(selector: string | undefined, active: boolean): ArrowPos | nul
       const el = document.querySelector(selector)
       if (!el) return
       const r = el.getBoundingClientRect()
-      // If element is in top 180px → place arrow below it (pointing up ▲)
-      const pointUp = r.top < 180
+      // Element fully out of viewport → hide arrow
+      if (r.bottom < 0 || r.top > window.innerHeight) { setPos(null); return }
+      const NAVBAR_H = 64
+      const pointUp = r.top < NAVBAR_H + 80
       const rawLeft = r.left + r.width / 2
+      const rawTop = pointUp ? r.bottom + 8 : r.top - 38
       setPos({
-        top: pointUp ? r.bottom + 8 : r.top - 38,
+        top: Math.max(NAVBAR_H + 4, Math.min(rawTop, window.innerHeight - 50)),
         left: Math.max(20, Math.min(rawLeft, window.innerWidth - 20)),
         pointUp,
       })
@@ -212,7 +215,7 @@ const GuideWidget = () => {
       </div>
     )}
 
-    <div className="fixed bottom-3 right-3 sm:bottom-5 sm:right-4 z-[300] flex flex-col items-end gap-2 select-none pointer-events-none">
+    <div className="fixed bottom-3 right-3 sm:bottom-5 sm:right-4 z-[300] flex flex-col items-end gap-2 select-none pointer-events-none max-h-[90vh] overflow-hidden">
 
       {/* ── Speech bubble ── */}
       <div
@@ -248,7 +251,7 @@ const GuideWidget = () => {
         </div>
 
         {/* Message */}
-        <div className="px-4 py-3 min-h-[72px]">
+        <div className="px-4 py-3 min-h-[72px] max-h-[30vh] overflow-y-auto">
           <p className="text-sm leading-relaxed text-foreground">
             {displayed}
             {!done && <span className="inline-block w-0.5 h-3.5 bg-primary ml-0.5 animate-pulse align-middle" />}

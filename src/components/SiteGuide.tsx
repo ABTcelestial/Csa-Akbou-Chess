@@ -29,7 +29,7 @@ const SiteGuide = () => {
       <button
         onClick={() => setOpen(o => !o)}
         aria-label="Guide du site"
-        className={`p-2 rounded-lg transition-colors ${
+        className={`min-h-[44px] min-w-[44px] flex items-center justify-center rounded-lg transition-colors ${
           activeGuide
             ? "text-[hsl(var(--chess-gold))] bg-[hsl(var(--chess-gold)/0.15)]"
             : "text-white/60 hover:text-white hover:bg-white/8"
@@ -39,9 +39,9 @@ const SiteGuide = () => {
       </button>
 
       {open && (
-        <div className="absolute right-0 top-full mt-2 w-[calc(100vw-24px)] sm:w-72 bg-background border border-border rounded-2xl shadow-2xl z-[500] overflow-hidden">
+        <div className="absolute right-0 top-full mt-2 w-[calc(100vw-24px)] max-w-[calc(100vw-12px)] sm:w-72 bg-background border border-border rounded-2xl shadow-2xl z-[500] overflow-hidden flex flex-col max-h-[80vh]">
           {/* Header */}
-          <div className="flex items-center justify-between px-4 py-3 border-b"
+          <div className="flex items-center justify-between px-4 py-3 border-b shrink-0"
             style={{ background: "linear-gradient(135deg, hsl(var(--chess-blue-dark)), hsl(var(--chess-blue)))" }}>
             <div className="flex items-center gap-2">
               <span className="text-lg">♔</span>
@@ -56,7 +56,7 @@ const SiteGuide = () => {
           </div>
 
           {/* Guide list */}
-          <div className="p-2 space-y-0.5">
+          <div className="p-2 space-y-0.5 overflow-y-auto flex-1">
             {GUIDES.map(g => (
               <button
                 key={g.id}
@@ -81,7 +81,7 @@ const SiteGuide = () => {
             ))}
           </div>
 
-          <div className="px-4 pb-3 pt-1">
+          <div className="px-4 pb-3 pt-1 shrink-0">
             <p className="text-[10px] text-muted-foreground text-center">
               Le Roi te guidera pas à pas sur le site
             </p>

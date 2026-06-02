@@ -123,7 +123,7 @@ const Index = () => {
         <div className="absolute right-0 top-1/2 -translate-y-1/2 w-[600px] h-[600px] rounded-full opacity-[0.06] pointer-events-none"
           style={{ background: "radial-gradient(circle, hsl(var(--chess-gold)), transparent 70%)" }} />
 
-        <div className="container relative z-10 py-32">
+        <div className="container relative z-10 py-20 md:py-32">
           <div className="max-w-3xl">
             <Reveal>
               {(clubName || founded) && (
@@ -136,7 +136,7 @@ const Index = () => {
             </Reveal>
             <Reveal delay={100}>
               {heroTitle && (
-                <h1 className="text-5xl font-bold leading-[1.08] text-white md:text-6xl lg:text-7xl text-balance mb-6">
+                <h1 className="text-4xl sm:text-5xl font-bold leading-[1.08] text-white md:text-6xl lg:text-7xl text-balance mb-6">
                   {heroTitle}
                 </h1>
               )}
@@ -257,23 +257,23 @@ const Index = () => {
                 )}
                 {/* Stats dynamiques */}
                 {(dynamicMembers || dynamicTournaments || teams) && (
-                  <div className="grid grid-cols-3 gap-4">
+                  <div className="grid grid-cols-3 gap-2 sm:gap-4">
                     {dynamicMembers && (
-                      <div className="rounded-xl border p-4 text-center" style={{ background: "hsl(var(--chess-blue)/0.04)", borderColor: "hsl(var(--chess-blue)/0.12)" }}>
-                        <p className="text-2xl font-display font-bold" style={{ color: "hsl(var(--chess-blue))" }}>{dynamicMembers}</p>
-                        <p className="text-xs text-muted-foreground mt-1">Membres</p>
+                      <div className="rounded-xl border p-3 sm:p-4 text-center" style={{ background: "hsl(var(--chess-blue)/0.04)", borderColor: "hsl(var(--chess-blue)/0.12)" }}>
+                        <p className="text-lg sm:text-2xl font-display font-bold" style={{ color: "hsl(var(--chess-blue))" }}>{dynamicMembers}</p>
+                        <p className="text-[10px] sm:text-xs text-muted-foreground mt-1">Membres</p>
                       </div>
                     )}
                     {dynamicTournaments && (
-                      <div className="rounded-xl border p-4 text-center" style={{ background: "hsl(var(--chess-blue)/0.04)", borderColor: "hsl(var(--chess-blue)/0.12)" }}>
-                        <p className="text-2xl font-display font-bold" style={{ color: "hsl(var(--chess-blue))" }}>{dynamicTournaments}</p>
-                        <p className="text-xs text-muted-foreground mt-1">Tournois joués</p>
+                      <div className="rounded-xl border p-3 sm:p-4 text-center" style={{ background: "hsl(var(--chess-blue)/0.04)", borderColor: "hsl(var(--chess-blue)/0.12)" }}>
+                        <p className="text-lg sm:text-2xl font-display font-bold" style={{ color: "hsl(var(--chess-blue))" }}>{dynamicTournaments}</p>
+                        <p className="text-[10px] sm:text-xs text-muted-foreground mt-1">Tournois joués</p>
                       </div>
                     )}
                     {teams && (
-                      <div className="rounded-xl border p-4 text-center" style={{ background: "hsl(var(--chess-blue)/0.04)", borderColor: "hsl(var(--chess-blue)/0.12)" }}>
-                        <p className="text-2xl font-display font-bold" style={{ color: "hsl(var(--chess-blue))" }}>{teams}</p>
-                        <p className="text-xs text-muted-foreground mt-1">Équipes</p>
+                      <div className="rounded-xl border p-3 sm:p-4 text-center" style={{ background: "hsl(var(--chess-blue)/0.04)", borderColor: "hsl(var(--chess-blue)/0.12)" }}>
+                        <p className="text-lg sm:text-2xl font-display font-bold" style={{ color: "hsl(var(--chess-blue))" }}>{teams}</p>
+                        <p className="text-[10px] sm:text-xs text-muted-foreground mt-1">Équipes</p>
                       </div>
                     )}
                   </div>
@@ -415,7 +415,7 @@ const Index = () => {
               <p className="text-sm">Aucune photo dans la galerie pour le moment.</p>
             </div>
           ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 sm:gap-3">
               {gallery.slice(0, 10).map((photo, i) => (
                 <Reveal key={photo.id} delay={i * 60}>
                   <div className="rounded-2xl border overflow-hidden group cursor-pointer hover:shadow-lg transition-all duration-300 hover:-translate-y-1"

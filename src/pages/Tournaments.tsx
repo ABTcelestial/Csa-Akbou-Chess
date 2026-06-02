@@ -769,7 +769,7 @@ const Tournaments = () => {
               </div>
             ) : (
               <>
-                <div className="grid gap-3 md:gap-5 grid-cols-2 sm:grid-cols-2 lg:grid-cols-4">
+                <div className="grid gap-3 md:gap-5 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
                   {pagedPast.map((t, i) => (
                     <Reveal key={t.id} delay={i * 50}>
                       <div className="rounded-2xl border bg-card shadow-sm overflow-hidden hover:shadow-md transition-all cursor-pointer group hover:border-primary/30 active:scale-[0.98]"
