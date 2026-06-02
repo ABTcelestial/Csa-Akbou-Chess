@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from "react"
+import { useEffect, useState, useCallback, useRef } from "react"
 import { useLocation } from "react-router-dom"
 import { X, ChevronRight, SkipForward } from "lucide-react"
 import { useGuide } from "@/lib/GuideContext"
@@ -88,7 +88,6 @@ function useArrow(selector: string | undefined, active: boolean): ArrowPos | nul
 const GuideWidget = () => {
   const { activeGuide, currentStep, advanceStep, stopGuide } = useGuide()
   const location = useLocation()
-  const navigate = useNavigate()
   const prevPathRef = useRef(location.pathname)
   const [showHint, setShowHint] = useState(false)
   const [kingMood, setKingMood] = useState<"normal" | "celebrate">("normal")
