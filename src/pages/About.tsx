@@ -102,6 +102,7 @@ const About = () => {
         title="À propos — Histoire & Équipe"
         description={`Découvrez l'histoire du club d'échecs ${clubName || 'CSA Akbou'}, ses valeurs, son équipe et ses séances hebdomadaires à Akbou, Béjaïa.`}
         path="/a-propos"
+        ogImage="/og-about.jpg"
         jsonLd={aboutJsonLd}
       />
       {/* Hero */}

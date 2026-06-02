@@ -138,6 +138,7 @@ const Contact = () => {
         title="Contact — Nous rejoindre"
         description="Contactez le club d'échecs CSA Akbou à Akbou, Béjaïa. Adresse, horaires des séances, formulaire de contact et FAQ pour rejoindre le club."
         path="/contact"
+        ogImage="/logo-club.jpg"
         jsonLd={contactJsonLd}
       />
       {/* Hero */}

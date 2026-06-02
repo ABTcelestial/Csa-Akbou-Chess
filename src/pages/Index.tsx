@@ -108,6 +108,7 @@ const Index = () => {
         title="CSA Akbou Chess — Club d'échecs à Akbou, Béjaïa"
         description={clubDesc || "Club d'échecs CSA Akbou à Akbou, Béjaïa (Algérie). Tournois homologués FFE, cours pour débutants et compétiteurs, séances hebdomadaires."}
         path="/"
+        ogImage="/og-home.jpg"
         jsonLd={homeJsonLd}
       />
       {/* ── HERO ── */}

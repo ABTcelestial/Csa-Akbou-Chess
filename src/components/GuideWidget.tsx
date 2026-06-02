@@ -58,9 +58,10 @@ function useArrow(selector: string | undefined, active: boolean): ArrowPos | nul
       const r = el.getBoundingClientRect()
       // If element is in top 180px → place arrow below it (pointing up ▲)
       const pointUp = r.top < 180
+      const rawLeft = r.left + r.width / 2
       setPos({
         top: pointUp ? r.bottom + 8 : r.top - 38,
-        left: r.left + r.width / 2,
+        left: Math.max(20, Math.min(rawLeft, window.innerWidth - 20)),
         pointUp,
       })
     }
@@ -211,11 +212,11 @@ const GuideWidget = () => {
       </div>
     )}
 
-    <div className="fixed bottom-5 right-4 z-[300] flex flex-col items-end gap-2 select-none pointer-events-none">
+    <div className="fixed bottom-3 right-3 sm:bottom-5 sm:right-4 z-[300] flex flex-col items-end gap-2 select-none pointer-events-none">
 
       {/* ── Speech bubble ── */}
       <div
-        className="pointer-events-auto w-72 sm:w-80 bg-white dark:bg-card rounded-2xl shadow-2xl border border-border overflow-hidden"
+        className="pointer-events-auto w-[calc(100vw-24px)] sm:w-80 bg-white dark:bg-card rounded-2xl shadow-2xl border border-border overflow-hidden"
         style={{ filter: "drop-shadow(0 8px 32px rgba(0,0,0,0.18))" }}
       >
         {/* Header */}
@@ -230,7 +231,7 @@ const GuideWidget = () => {
             <span className="text-white/50 text-[10px]">{currentStep + 1}/{activeGuide.steps.length}</span>
             <button
               onClick={stopGuide}
-              className="text-white/50 hover:text-white transition-colors p-0.5 rounded"
+              className="text-white/50 hover:text-white transition-colors p-2 rounded-lg"
               aria-label="Fermer le guide"
             >
               <X size={14} />
@@ -282,19 +283,19 @@ const GuideWidget = () => {
             {/* Skip button — always visible */}
             <button
               onClick={stopGuide}
-              className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors px-2 py-1 rounded-lg hover:bg-muted"
+              className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors px-3 py-2 rounded-lg hover:bg-muted"
             >
-              <SkipForward size={11} /> Passer
+              <SkipForward size={12} /> Passer
             </button>
 
             {/* Manual "next" button — only shown on manual trigger OR as fallback */}
             {(step.trigger.type === "manual" || (done && showHint)) && (
               <button
                 onClick={isLastStep ? stopGuide : doAdvance}
-                className="flex items-center gap-1 text-xs font-semibold text-white px-3 py-1.5 rounded-lg transition-all active:scale-95"
+                className="flex items-center gap-1 text-xs font-semibold text-white px-3 py-2 rounded-lg transition-all active:scale-95"
                 style={{ background: "hsl(var(--chess-blue))" }}
               >
-                {isLastStep ? "Terminer ✓" : <>Suivant <ChevronRight size={11} /></>}
+                {isLastStep ? "Terminer ✓" : <>Suivant <ChevronRight size={12} /></>}
               </button>
             )}
           </div>

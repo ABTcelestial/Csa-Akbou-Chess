@@ -309,6 +309,7 @@ const Achievements = () => {
         title="Réalisations — Palmarès & Galerie"
         description="Palmarès, trophées et galerie photo du club d'échecs CSA Akbou. Nos joueurs en compétition à travers l'Algérie."
         path="/realisations"
+        ogImage="/og-about.jpg"
         jsonLd={achievementsJsonLd}
       />
       {/* Lightbox rendue au root — hors de tout overflow:hidden */}

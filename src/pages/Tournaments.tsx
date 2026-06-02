@@ -604,6 +604,7 @@ const Tournaments = () => {
         title="Tournois d'échecs — Calendrier & Inscriptions"
         description="Retrouvez tous les tournois homologués du club d'échecs CSA Akbou à Akbou (Béjaïa). Inscriptions en ligne, résultats et fiches techniques."
         path="/tournois"
+        ogImage="/og-tournois.jpg"
         jsonLd={tournamentsJsonLd}
       />
       {lightboxData && <Lightbox photos={lightboxData.photos} index={lightboxData.index} onClose={() => setLightboxData(null)} />}
