@@ -113,11 +113,11 @@ export const GUIDES: Guide[] = [
       {
         message: "Clique sur « Individuelle », remplis ton Nom, Prénom et ta date de naissance (JJ/MM/AAAA), puis clique sur « Valider mon inscription ».",
         trigger: { type: "event", name: "guide:registration-success" },
-        highlight: '[data-guide="tab-solo"]',
+        highlight: '[data-guide="btn-confirmer"]',
         hint: "Le FIDE ID est facultatif. Si tu n'en as pas, laisse le champ vide.",
       },
       {
-        message: "Inscription confirmée ! 🎉 Télécharge ta fiche PDF — elle peut t'être demandée le jour du tournoi. ♔",
+        message: "Inscription confirmée ! 🎉 Télécharge et conserve ta fiche PDF. ♔",
         trigger: { type: "manual" },
       },
     ],
@@ -145,7 +145,7 @@ export const GUIDES: Guide[] = [
       {
         message: "Clique sur « Club », remplis le nom du club et du responsable, ajoute chaque joueur (+ Ajouter un joueur), puis valide. Tu peux aussi importer un fichier JSON d'un tournoi précédent !",
         trigger: { type: "event", name: "guide:registration-success" },
-        highlight: '[data-guide="tab-club"]',
+        highlight: '[data-guide="btn-confirmer"]',
         hint: "Chaque joueur doit avoir un Nom, Prénom et une date de naissance complète.",
       },
       {

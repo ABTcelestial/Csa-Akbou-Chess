@@ -546,9 +546,10 @@ const Tournaments = () => {
   const upcoming = all.filter(t => !t.is_past);
   const past     = all.filter(t => t.is_past);
 
-  // Inject mock tournament when guide is active but no real upcoming tournaments exist
-  const isMockActive = !loading && activeGuide !== null && upcoming.length === 0;
-  const upcomingWithMock = isMockActive ? [MOCK_GUIDE_TOURNAMENT, ...upcoming] : upcoming;
+  // Inscription guides always use mock (even if real tournaments exist) to avoid accidental real registrations
+  const isInscriptionGuide = activeGuide?.id === "inscription-solo" || activeGuide?.id === "inscription-club";
+  const useMock = !loading && activeGuide !== null && (isInscriptionGuide || upcoming.length === 0);
+  const upcomingWithMock = useMock ? [MOCK_GUIDE_TOURNAMENT] : upcoming;
 
   const filteredUpcoming = useMemo(() =>
     searchQuery.trim() === "" ? upcomingWithMock :
@@ -642,7 +643,7 @@ const Tournaments = () => {
       </div>
 
       {/* Bannière guide test */}
-      {isMockActive && (
+      {useMock && (
         <div className="border-y" style={{ background: "hsl(var(--chess-gold)/0.08)", borderColor: "hsl(var(--chess-gold)/0.25)" }}>
           <div className="container py-2 flex items-center gap-2.5">
             <span className="text-base">♔</span>
