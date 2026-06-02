@@ -143,7 +143,7 @@ export const GUIDES: Guide[] = [
         highlight: '[data-guide="btn-sinscrire"]',
       },
       {
-        message: "Clique sur « Club », remplis le nom du club et du responsable, ajoute chaque joueur (+ Ajouter un joueur), puis valide. Tu peux aussi importer un fichier JSON d'un tournoi précédent !",
+        message: "Clique sur « Club », remplis le nom du club et du responsable, ajoute chaque joueur (+ Ajouter un joueur), puis valide.",
         trigger: { type: "event", name: "guide:registration-success" },
         highlight: '[data-guide="btn-confirmer"]',
         hint: "Chaque joueur doit avoir un Nom, Prénom et une date de naissance complète.",
