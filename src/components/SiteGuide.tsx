@@ -39,7 +39,7 @@ const SiteGuide = () => {
       </button>
 
       {open && (
-        <div className="absolute right-0 top-full mt-2 w-[calc(100vw-24px)] max-w-[calc(100vw-12px)] sm:w-72 bg-background border border-border rounded-2xl shadow-2xl z-[500] overflow-hidden flex flex-col max-h-[80vh]">
+        <div className="fixed right-2 top-[68px] sm:absolute sm:right-0 sm:top-full sm:mt-2 w-[calc(100vw-16px)] sm:w-72 bg-background border border-border rounded-2xl shadow-2xl z-[500] overflow-hidden flex flex-col max-h-[80vh]">
           {/* Header */}
           <div className="flex items-center justify-between px-4 py-3 border-b shrink-0"
             style={{ background: "linear-gradient(135deg, hsl(var(--chess-blue-dark)), hsl(var(--chess-blue)))" }}>

@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback, useRef } from "react"
 import { useLocation } from "react-router-dom"
-import { X, ChevronRight, SkipForward } from "lucide-react"
+import { X, ChevronRight, SkipForward, GripHorizontal, Minus, ChevronUp } from "lucide-react"
 import { useGuide } from "@/lib/GuideContext"
 
 // ── Typewriter hook ────────────────────────────────────────────────────────
@@ -95,6 +95,44 @@ const GuideWidget = () => {
   const prevPathRef = useRef(location.pathname)
   const [showHint, setShowHint] = useState(false)
   const [kingMood, setKingMood] = useState<"normal" | "celebrate">("normal")
+  const [minimized, setMinimized] = useState(false)
+
+  // ── Drag state ──────────────────────────────────────────────────────────
+  const containerRef = useRef<HTMLDivElement>(null)
+  const [dragPos, setDragPos] = useState<{ x: number; y: number } | null>(null)
+  const dragStart = useRef<{ clientX: number; clientY: number; elemX: number; elemY: number } | null>(null)
+
+  const onPointerDown = useCallback((e: React.PointerEvent) => {
+    if (!containerRef.current) return
+    e.preventDefault()
+    const rect = containerRef.current.getBoundingClientRect()
+    dragStart.current = {
+      clientX: e.clientX,
+      clientY: e.clientY,
+      elemX: rect.left,
+      elemY: rect.top,
+    }
+
+    const onMove = (ev: PointerEvent) => {
+      if (!dragStart.current || !containerRef.current) return
+      const dx = ev.clientX - dragStart.current.clientX
+      const dy = ev.clientY - dragStart.current.clientY
+      const w = containerRef.current.offsetWidth
+      const h = containerRef.current.offsetHeight
+      const newX = Math.max(0, Math.min(dragStart.current.elemX + dx, window.innerWidth - w))
+      const newY = Math.max(0, Math.min(dragStart.current.elemY + dy, window.innerHeight - h))
+      setDragPos({ x: newX, y: newY })
+    }
+
+    const onUp = () => {
+      dragStart.current = null
+      window.removeEventListener("pointermove", onMove)
+      window.removeEventListener("pointerup", onUp)
+    }
+
+    window.addEventListener("pointermove", onMove)
+    window.addEventListener("pointerup", onUp)
+  }, [])
 
   const step = activeGuide?.steps[currentStep] ?? null
   const isLastStep = activeGuide ? currentStep === activeGuide.steps.length - 1 : false
@@ -103,6 +141,12 @@ const GuideWidget = () => {
 
   useHighlight(step?.highlight, !!activeGuide)
   const arrowPos = useArrow(step?.highlight, !!activeGuide)
+
+  // Reset drag + minimize on guide change
+  useEffect(() => {
+    setDragPos(null)
+    setMinimized(false)
+  }, [activeGuide?.id])
 
   // ── Hint timer ─────────────────────────────────────────────────────────
   useEffect(() => {
@@ -132,7 +176,6 @@ const GuideWidget = () => {
     if (!step || step.trigger.type !== "navigate") return
     const prev = prevPathRef.current
     const target = step.trigger.path
-    // Already on target page when step starts → advance immediately
     if (location.pathname === target && prev !== location.pathname) {
       doAdvance()
     }
@@ -187,6 +230,10 @@ const GuideWidget = () => {
 
   const progress = (currentStep / (activeGuide.steps.length - 1)) * 100
 
+  const containerStyle: React.CSSProperties = dragPos
+    ? { top: dragPos.y, left: dragPos.x, bottom: "auto", right: "auto" }
+    : {}
+
   return (
     <>
     {/* ── Arrow indicator ── */}
@@ -215,110 +262,134 @@ const GuideWidget = () => {
       </div>
     )}
 
-    <div className="fixed bottom-3 right-3 sm:bottom-5 sm:right-4 z-[300] flex flex-col items-end gap-2 select-none pointer-events-none max-h-[90vh] overflow-hidden">
+    <div
+      ref={containerRef}
+      className={`fixed z-[300] flex flex-col items-end gap-2 select-none pointer-events-none${
+        dragPos ? "" : " bottom-3 right-3 sm:bottom-5 sm:right-4"
+      }`}
+      style={containerStyle}
+    >
 
       {/* ── Speech bubble ── */}
       <div
-        className="pointer-events-auto w-[calc(100vw-24px)] sm:w-80 bg-white dark:bg-card rounded-2xl shadow-2xl border border-border overflow-hidden"
+        className="pointer-events-auto w-[min(320px,calc(100vw-24px))] bg-white dark:bg-card rounded-2xl shadow-2xl border border-border overflow-hidden"
         style={{ filter: "drop-shadow(0 8px 32px rgba(0,0,0,0.18))" }}
       >
-        {/* Header */}
-        <div className="flex items-center justify-between px-3.5 py-2.5 border-b"
-          style={{ background: "linear-gradient(135deg, hsl(var(--chess-blue-dark)), hsl(var(--chess-blue)))" }}>
-          <div className="flex items-center gap-2">
-            <span className="text-white/80 text-xs font-semibold tracking-wide">
+        {/* Header — drag handle */}
+        <div
+          className="flex items-center justify-between px-3 py-2.5 border-b cursor-grab active:cursor-grabbing touch-none"
+          style={{ background: "linear-gradient(135deg, hsl(var(--chess-blue-dark)), hsl(var(--chess-blue)))" }}
+          onPointerDown={onPointerDown}
+        >
+          <div className="flex items-center gap-1.5 min-w-0">
+            <GripHorizontal size={13} className="text-white/40 shrink-0" />
+            <span className="text-white/80 text-xs font-semibold tracking-wide truncate">
               {activeGuide.title}
             </span>
           </div>
-          <div className="flex items-center gap-1.5">
-            <span className="text-white/50 text-[10px]">{currentStep + 1}/{activeGuide.steps.length}</span>
+          <div className="flex items-center gap-0.5 shrink-0">
+            <span className="text-white/50 text-[10px] mr-1">{currentStep + 1}/{activeGuide.steps.length}</span>
+            <button
+              onClick={() => setMinimized(m => !m)}
+              className="text-white/50 hover:text-white transition-colors p-1.5 rounded-lg"
+              aria-label={minimized ? "Agrandir le guide" : "Réduire le guide"}
+              onPointerDown={e => e.stopPropagation()}
+            >
+              {minimized ? <ChevronUp size={13} /> : <Minus size={13} />}
+            </button>
             <button
               onClick={stopGuide}
-              className="text-white/50 hover:text-white transition-colors p-2 rounded-lg"
+              className="text-white/50 hover:text-white transition-colors p-1.5 rounded-lg"
               aria-label="Fermer le guide"
+              onPointerDown={e => e.stopPropagation()}
             >
-              <X size={14} />
+              <X size={13} />
             </button>
           </div>
         </div>
 
-        {/* Progress bar */}
-        <div className="h-0.5 bg-muted">
-          <div
-            className="h-full transition-all duration-500"
-            style={{ width: `${progress}%`, background: "hsl(var(--chess-gold))" }}
-          />
-        </div>
+        {/* Collapsible content */}
+        {!minimized && (
+          <>
+            {/* Progress bar */}
+            <div className="h-0.5 bg-muted">
+              <div
+                className="h-full transition-all duration-500"
+                style={{ width: `${progress}%`, background: "hsl(var(--chess-gold))" }}
+              />
+            </div>
 
-        {/* Message */}
-        <div className="px-4 py-3 min-h-[72px] max-h-[30vh] overflow-y-auto">
-          <p className="text-sm leading-relaxed text-foreground">
-            {displayed}
-            {!done && <span className="inline-block w-0.5 h-3.5 bg-primary ml-0.5 animate-pulse align-middle" />}
-          </p>
-        </div>
+            {/* Message */}
+            <div className="px-3.5 py-3 min-h-[64px] max-h-[28vh] overflow-y-auto">
+              <p className="text-sm leading-relaxed text-foreground">
+                {displayed}
+                {!done && <span className="inline-block w-0.5 h-3.5 bg-primary ml-0.5 animate-pulse align-middle" />}
+              </p>
+            </div>
 
-        {/* Hint */}
-        {showHint && step.hint && (
-          <div className="mx-3 mb-2 px-3 py-2 rounded-xl text-xs flex gap-2"
-            style={{ background: "hsl(var(--chess-gold)/0.10)", color: "hsl(var(--chess-gold-dark))" }}>
-            <span className="shrink-0">💡</span>
-            <span>{step.hint}</span>
-          </div>
+            {/* Hint */}
+            {showHint && step.hint && (
+              <div className="mx-3 mb-2 px-3 py-2 rounded-xl text-xs flex gap-2"
+                style={{ background: "hsl(var(--chess-gold)/0.10)", color: "hsl(var(--chess-gold-dark))" }}>
+                <span className="shrink-0">💡</span>
+                <span>{step.hint}</span>
+              </div>
+            )}
+
+            {/* Footer */}
+            <div className="flex items-center justify-between gap-2 px-3 pb-3">
+              {/* Dot progress */}
+              <div className="flex items-center gap-1">
+                {activeGuide.steps.map((_, i) => (
+                  <div key={i} className={`rounded-full transition-all duration-300 ${
+                    i < currentStep
+                      ? "w-1.5 h-1.5 bg-green-400"
+                      : i === currentStep
+                      ? "w-3 h-1.5 bg-[hsl(var(--chess-blue))]"
+                      : "w-1.5 h-1.5 bg-muted"
+                  }`} />
+                ))}
+              </div>
+
+              <div className="flex items-center gap-1.5">
+                <button
+                  onClick={stopGuide}
+                  className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors px-2.5 py-1.5 rounded-lg hover:bg-muted"
+                >
+                  <SkipForward size={12} /> Passer
+                </button>
+
+                {(step.trigger.type === "manual" || (done && showHint)) && (
+                  <button
+                    onClick={isLastStep ? stopGuide : doAdvance}
+                    className="flex items-center gap-1 text-xs font-semibold text-white px-2.5 py-1.5 rounded-lg transition-all active:scale-95"
+                    style={{ background: "hsl(var(--chess-blue))" }}
+                  >
+                    {isLastStep ? "Terminer ✓" : <>Suivant <ChevronRight size={12} /></>}
+                  </button>
+                )}
+              </div>
+            </div>
+          </>
         )}
 
-        {/* Footer */}
-        <div className="flex items-center justify-between gap-2 px-3 pb-3">
-          {/* Dot progress */}
-          <div className="flex items-center gap-1">
-            {activeGuide.steps.map((_, i) => (
-              <div key={i} className={`rounded-full transition-all duration-300 ${
-                i < currentStep
-                  ? "w-1.5 h-1.5 bg-green-400"
-                  : i === currentStep
-                  ? "w-3 h-1.5 bg-[hsl(var(--chess-blue))]"
-                  : "w-1.5 h-1.5 bg-muted"
-              }`} />
-            ))}
-          </div>
-
-          <div className="flex items-center gap-1.5">
-            {/* Skip button — always visible */}
-            <button
-              onClick={stopGuide}
-              className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors px-3 py-2 rounded-lg hover:bg-muted"
-            >
-              <SkipForward size={12} /> Passer
-            </button>
-
-            {/* Manual "next" button — only shown on manual trigger OR as fallback */}
-            {(step.trigger.type === "manual" || (done && showHint)) && (
-              <button
-                onClick={isLastStep ? stopGuide : doAdvance}
-                className="flex items-center gap-1 text-xs font-semibold text-white px-3 py-2 rounded-lg transition-all active:scale-95"
-                style={{ background: "hsl(var(--chess-blue))" }}
-              >
-                {isLastStep ? "Terminer ✓" : <>Suivant <ChevronRight size={12} /></>}
-              </button>
-            )}
-          </div>
-        </div>
-
-        {/* Bubble tail */}
-        <div className="absolute -bottom-2 right-10 w-4 h-4 bg-card border-r border-b border-border rotate-45" />
+        {/* Bubble tail (hidden when minimized) */}
+        {!minimized && (
+          <div className="absolute -bottom-2 right-10 w-4 h-4 bg-card border-r border-b border-border rotate-45" />
+        )}
       </div>
 
       {/* ── King character ── */}
       <div className="pointer-events-auto flex items-center gap-2 mr-2">
         <div
-          className="relative w-14 h-14 rounded-full flex items-center justify-center cursor-default shadow-xl border-2"
+          className="relative w-12 h-12 rounded-full flex items-center justify-center cursor-default shadow-xl border-2"
           style={{
             background: "linear-gradient(135deg, hsl(var(--chess-blue-dark)), hsl(var(--chess-blue)))",
             borderColor: "hsl(var(--chess-gold)/0.5)",
             animation: kingMood === "celebrate"
               ? "king-celebrate 0.6s ease-in-out infinite alternate"
               : "king-float 3s ease-in-out infinite",
-            fontSize: "2rem",
+            fontSize: "1.75rem",
             userSelect: "none",
           }}
           title="Le Roi — ton guide"
