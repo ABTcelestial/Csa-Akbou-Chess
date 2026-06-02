@@ -3,7 +3,9 @@ import { BrowserRouter, Route, Routes, useLocation } from "react-router-dom";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { SiteConfigProvider } from "@/lib/SiteConfigContext";
+import { SiteConfigProvider } from "@/lib/SiteConfigContext"
+import { GuideProvider } from "@/lib/GuideContext"
+import GuideWidget from "@/components/GuideWidget";
 import { Analytics } from "@vercel/analytics/react";
 import { SpeedInsights } from "@vercel/speed-insights/react";
 import { useEffect } from "react";
@@ -77,12 +79,14 @@ const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
       <SiteConfigProvider>
+        <GuideProvider>
         <Toaster />
         <Sonner />
         <Analytics />
         <SpeedInsights />
         <BrowserRouter>
           <PageTracker />
+          <GuideWidget />
           <Routes>
             <Route path="/" element={<Index />} />
             <Route path="/a-propos" element={<About />} />
@@ -94,6 +98,7 @@ const App = () => (
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
+        </GuideProvider>
       </SiteConfigProvider>
     </TooltipProvider>
   </QueryClientProvider>

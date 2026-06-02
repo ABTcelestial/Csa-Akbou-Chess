@@ -145,6 +145,7 @@ const TournamentModal = ({ tournament, onClose, onOpenLightbox }: {
       }
       setSavedRegistration(row);
       setStep("success");
+      window.dispatchEvent(new CustomEvent("guide:registration-success"));
       // Envoi email en arrière-plan (non-bloquant)
       if (email) {
         fetch('/api/send-registration-email', {
@@ -289,7 +290,7 @@ const TournamentModal = ({ tournament, onClose, onOpenLightbox }: {
                   🔒 Inscriptions clôturées
                 </div>
               ) : (
-                <button onClick={() => setStep("form")}
+                <button data-guide="btn-sinscrire" onClick={() => setStep("form")}
                   className="w-full rounded-xl py-3.5 font-bold text-sm text-white flex items-center justify-center gap-2 transition-all active:scale-[0.99]"
                   style={{ background: "linear-gradient(135deg, hsl(var(--chess-blue-dark)), hsl(var(--chess-blue)))" }}>
                   S'inscrire à ce tournoi <ChevronRight size={16} />
@@ -306,10 +307,10 @@ const TournamentModal = ({ tournament, onClose, onOpenLightbox }: {
               <h3 className="font-bold text-base">Inscription — {tournament.title}</h3>
               <div className="grid grid-cols-2 gap-3">
                 {[
-                  { type: "solo" as const, icon: UserPlus, title: "Individuelle", desc: "Je m'inscris seul(e)" },
-                  { type: "club" as const, icon: Building2, title: "Club", desc: "Plusieurs joueurs" },
+                  { type: "solo" as const, icon: UserPlus, title: "Individuelle", desc: "Je m'inscris seul(e)", guideTarget: "tab-solo" },
+                  { type: "club" as const, icon: Building2, title: "Club", desc: "Plusieurs joueurs", guideTarget: "tab-club" },
                 ].map(opt => (
-                  <button key={opt.type} onClick={() => setInscriptionType(opt.type)}
+                  <button key={opt.type} data-guide={opt.guideTarget} onClick={() => setInscriptionType(opt.type)}
                     className={`rounded-xl border-2 p-4 text-left transition-all active:scale-[0.98] ${inscriptionType === opt.type ? "border-primary bg-primary/5" : "border-border hover:border-primary/40"}`}>
                     <opt.icon size={20} className={inscriptionType === opt.type ? "text-primary" : "text-muted-foreground"} />
                     <p className="font-semibold text-sm mt-2">{opt.title}</p>
@@ -345,7 +346,7 @@ const TournamentModal = ({ tournament, onClose, onOpenLightbox }: {
                     <label className="text-xs font-medium mb-1 block">Email <span className="text-muted-foreground font-normal">(optionnel — confirmation envoyée)</span></label>
                     <input type="email" placeholder="votre@email.com" className={inputCls} value={email} onChange={e => setEmail(e.target.value)} />
                   </div>
-                  <button onClick={handleSubmit} disabled={submitting || !soloForm.nom || !soloForm.prenom || soloForm.dateNaissance.length < 10}
+                  <button data-guide="btn-confirmer" onClick={handleSubmit} disabled={submitting || !soloForm.nom || !soloForm.prenom || soloForm.dateNaissance.length < 10}
                     className="w-full rounded-xl py-3.5 font-bold text-sm text-white flex items-center justify-center gap-2 disabled:opacity-50 active:scale-[0.99]"
                     style={{ background: "linear-gradient(135deg, hsl(var(--chess-blue-dark)), hsl(var(--chess-blue)))" }}>
                     {submitting && <Loader2 size={14} className="animate-spin" />} Valider mon inscription
@@ -407,7 +408,7 @@ const TournamentModal = ({ tournament, onClose, onOpenLightbox }: {
                     <label className="text-xs font-medium mb-1 block">Email <span className="text-muted-foreground font-normal">(optionnel — confirmation envoyée)</span></label>
                     <input type="email" placeholder="votre@email.com" className={inputCls} value={email} onChange={e => setEmail(e.target.value)} />
                   </div>
-                  <button onClick={handleSubmit} disabled={submitting || !clubForm.nomClub || !clubForm.responsable || joueurs.some(j => !j.nom || !j.prenom || j.dateNaissance.length < 10)}
+                  <button data-guide="btn-confirmer" onClick={handleSubmit} disabled={submitting || !clubForm.nomClub || !clubForm.responsable || joueurs.some(j => !j.nom || !j.prenom || j.dateNaissance.length < 10)}
                     className="w-full rounded-xl py-3.5 font-bold text-sm text-white flex items-center justify-center gap-2 disabled:opacity-50"
                     style={{ background: "linear-gradient(135deg, hsl(var(--chess-blue-dark)), hsl(var(--chess-blue)))" }}>
                     {submitting && <Loader2 size={14} className="animate-spin" />} Valider l'inscription du club
@@ -624,7 +625,7 @@ const Tournaments = () => {
             <div className="space-y-3 md:space-y-4">
               {filteredUpcoming.map((t, i) => (
                 <Reveal key={t.id} delay={i * 40}>
-                  <div className="rounded-2xl border bg-card p-4 md:p-6 shadow-sm hover:shadow-md transition-all cursor-pointer hover:border-primary/30 group active:scale-[0.995]"
+                  <div data-guide="tournament-card" className="rounded-2xl border bg-card p-4 md:p-6 shadow-sm hover:shadow-md transition-all cursor-pointer hover:border-primary/30 group active:scale-[0.995]"
                     onClick={() => openTournament(t)}>
                     <div className="flex gap-3 md:gap-4">
                       {/* Thumb */}
