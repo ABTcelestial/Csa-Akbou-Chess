@@ -24,6 +24,37 @@ function useTypewriter(text: string, speed = 22) {
   return { displayed, done }
 }
 
+// ── Visibility helper ──────────────────────────────────────────────────────
+// Find first element matching selector that is actually visible on screen
+// (skips display:none ancestors and collapsed overflow:hidden containers like the mobile nav)
+function findVisibleElement(selector: string): Element | null {
+  const all = document.querySelectorAll(selector)
+  for (const el of all) {
+    // Walk ancestors: skip if any has display:none
+    let hiddenByDisplay = false
+    let node: Element | null = el
+    while (node) {
+      if (window.getComputedStyle(node).display === "none") { hiddenByDisplay = true; break }
+      node = node.parentElement
+    }
+    if (hiddenByDisplay) continue
+
+    // Walk ancestors: skip if inside a collapsed overflow:hidden container (e.g. mobile nav max-h-0)
+    let collapsed = false
+    node = el.parentElement
+    while (node && node !== document.body) {
+      const s = window.getComputedStyle(node)
+      const maxH = parseFloat(s.maxHeight)
+      if (!isNaN(maxH) && maxH < 1 && s.overflow.includes("hidden")) { collapsed = true; break }
+      node = node.parentElement
+    }
+    if (collapsed) continue
+
+    return el
+  }
+  return null
+}
+
 // ── Pulsing highlight ──────────────────────────────────────────────────────
 function useHighlight(selector: string | undefined, active: boolean) {
   useEffect(() => {
@@ -34,7 +65,7 @@ function useHighlight(selector: string | undefined, active: boolean) {
 
     let attempts = 0
     const tryHighlight = () => {
-      const el = document.querySelector(selector)
+      const el = findVisibleElement(selector)
       if (el) { cleanup(); el.classList.add("guide-pulse") }
       else if (attempts++ < 8) setTimeout(tryHighlight, 350)
     }
@@ -53,10 +84,10 @@ function useArrow(selector: string | undefined, active: boolean): ArrowPos | nul
     if (!active || !selector) { setPos(null); return }
 
     const compute = () => {
-      const el = document.querySelector(selector)
-      if (!el) return
+      const el = findVisibleElement(selector)
+      if (!el) { setPos(null); return }
       const r = el.getBoundingClientRect()
-      // Element fully out of viewport → hide arrow
+      if (r.width === 0 && r.height === 0) { setPos(null); return }
       if (r.bottom < 0 || r.top > window.innerHeight) { setPos(null); return }
       const NAVBAR_H = 64
       const pointUp = r.top < NAVBAR_H + 80
@@ -71,7 +102,7 @@ function useArrow(selector: string | undefined, active: boolean): ArrowPos | nul
 
     let attempts = 0
     const tryFind = () => {
-      if (document.querySelector(selector)) compute()
+      if (findVisibleElement(selector)) compute()
       else if (attempts++ < 10) setTimeout(tryFind, 320)
     }
     tryFind()
