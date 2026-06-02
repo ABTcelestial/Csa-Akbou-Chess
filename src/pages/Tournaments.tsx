@@ -3,11 +3,13 @@ import Reveal from "@/components/Reveal";
 import PageSEO from "@/components/PageSEO";
 import ConfirmationCard from "@/components/ConfirmationCard";
 import { useState, useMemo, useEffect } from "react";
-import { Calendar, Clock, Users, MapPin, X, ChevronRight, UserPlus, Building2, Plus, Trash2, CheckCircle, FileImage, Loader2, Search, Trophy, ChevronLeft, Lock, Link2, Check, Download, Mail } from "lucide-react";
+import { Calendar, Clock, Users, MapPin, X, ChevronRight, UserPlus, Building2, Plus, Trash2, CheckCircle, FileImage, Loader2, Search, Trophy, ChevronLeft, Lock, Link2, Check, Download, Mail, Info } from "lucide-react";
 import { useTournaments, submitRegistration, Registration } from "@/hooks/useSupabase";
 import { useSearchParams } from "react-router-dom";
 import { supabase, Tournament } from "@/lib/supabase";
 import { toast } from "sonner";
+import { useGuide, MOCK_GUIDE_TOURNAMENT } from "@/lib/GuideContext";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
 // ── Statut automatique selon la date ─────────────────────────────
 function getTournamentStatus(t: Tournament): 'bientot' | 'aujourdhui' | 'finis' {
@@ -138,7 +140,19 @@ const TournamentModal = ({ tournament, onClose, onOpenLightbox }: {
     setSubmitting(true);
     try {
       let row: Registration;
-      if (inscriptionType === 'solo') {
+      if (tournament.id === "__guide_test__") {
+        // Mock tournament — skip Supabase, build registration locally
+        row = {
+          id: crypto.randomUUID(),
+          tournament_id: "__guide_test__",
+          type: inscriptionType as "solo" | "club",
+          ...(inscriptionType === "solo"
+            ? { nom: soloForm.nom, prenom: soloForm.prenom, fide_id: soloForm.fideId || undefined, club: soloForm.club || undefined, date_naissance: soloForm.dateNaissance }
+            : { nom_club: clubForm.nomClub, responsable: clubForm.responsable, telephone: clubForm.telephone || undefined, joueurs }),
+          email: email || undefined,
+          created_at: new Date().toISOString(),
+        };
+      } else if (inscriptionType === 'solo') {
         row = await submitRegistration({ tournament_id: tournament.id, type: 'solo', nom: soloForm.nom, prenom: soloForm.prenom, fide_id: soloForm.fideId, club: soloForm.club, date_naissance: soloForm.dateNaissance, email });
       } else {
         row = await submitRegistration({ tournament_id: tournament.id, type: 'club', nom_club: clubForm.nomClub, responsable: clubForm.responsable, telephone: clubForm.telephone, joueurs, email });
@@ -441,15 +455,27 @@ const TournamentModal = ({ tournament, onClose, onOpenLightbox }: {
 
               {/* Actions */}
               <div className="flex flex-col sm:flex-row gap-2 pt-1">
-                <button
-                  onClick={downloadCard}
-                  disabled={downloading}
-                  className="flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-xl font-semibold text-sm text-white disabled:opacity-60 transition-all active:scale-[0.98]"
-                  style={{ background: "linear-gradient(135deg, hsl(var(--chess-blue-dark)), hsl(var(--chess-blue)))" }}
-                >
-                  {downloading ? <Loader2 size={15} className="animate-spin" /> : <Download size={15} />}
-                  {downloading ? "Génération…" : "Télécharger la fiche (PDF)"}
-                </button>
+                <div className="flex-1 flex items-center gap-1.5">
+                  <button
+                    onClick={downloadCard}
+                    disabled={downloading}
+                    className="flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-xl font-semibold text-sm text-white disabled:opacity-60 transition-all active:scale-[0.98]"
+                    style={{ background: "linear-gradient(135deg, hsl(var(--chess-blue-dark)), hsl(var(--chess-blue)))" }}
+                  >
+                    {downloading ? <Loader2 size={15} className="animate-spin" /> : <Download size={15} />}
+                    {downloading ? "Génération…" : "Télécharger la fiche (PDF)"}
+                  </button>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <button className="p-2 text-muted-foreground hover:text-foreground transition-colors shrink-0" aria-label="À propos de la fiche">
+                        <Info size={15} />
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent side="top" className="max-w-[220px] text-xs">
+                      Cette fiche fait office de preuve d'inscription. En cas de problème technique avec le site, elle vous garantit un remboursement.
+                    </TooltipContent>
+                  </Tooltip>
+                </div>
 
                 <div className="flex items-center justify-center gap-2 py-3 px-4 rounded-xl border text-sm text-muted-foreground bg-muted/30 sm:flex-1">
                   <Mail size={14} className={emailSent ? "text-green-500" : "text-muted-foreground"} />
@@ -493,6 +519,7 @@ const Tournaments = () => {
   const [pastPage, setPastPage] = useState(0);
   const PAST_PER_PAGE = 8;
   const [searchParams, setSearchParams] = useSearchParams();
+  const { activeGuide } = useGuide();
 
   const { data: all, loading } = useTournaments();
 
@@ -519,14 +546,18 @@ const Tournaments = () => {
   const upcoming = all.filter(t => !t.is_past);
   const past     = all.filter(t => t.is_past);
 
+  // Inject mock tournament when guide is active but no real upcoming tournaments exist
+  const isMockActive = !loading && activeGuide !== null && upcoming.length === 0;
+  const upcomingWithMock = isMockActive ? [MOCK_GUIDE_TOURNAMENT, ...upcoming] : upcoming;
+
   const filteredUpcoming = useMemo(() =>
-    searchQuery.trim() === "" ? upcoming :
-    upcoming.filter(t =>
+    searchQuery.trim() === "" ? upcomingWithMock :
+    upcomingWithMock.filter(t =>
       t.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
       t.location?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       t.type?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       t.niveaux?.toLowerCase().includes(searchQuery.toLowerCase())
-    ), [upcoming, searchQuery]);
+    ), [upcomingWithMock, searchQuery]);
 
   const filteredPast = useMemo(() =>
     searchQuery.trim() === "" ? past :
@@ -609,6 +640,19 @@ const Tournaments = () => {
           </div>
         </div>
       </div>
+
+      {/* Bannière guide test */}
+      {isMockActive && (
+        <div className="border-y" style={{ background: "hsl(var(--chess-gold)/0.08)", borderColor: "hsl(var(--chess-gold)/0.25)" }}>
+          <div className="container py-2 flex items-center gap-2.5">
+            <span className="text-base">♔</span>
+            <p className="text-xs">
+              <span className="font-semibold" style={{ color: "hsl(var(--chess-gold-dark))" }}>Mode guide — Tournoi de démonstration</span>
+              <span className="text-muted-foreground ml-2">Votre inscription ne sera pas enregistrée · PDF et email fonctionnent normalement</span>
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Prochains tournois */}
       <section className="py-12 md:py-20">

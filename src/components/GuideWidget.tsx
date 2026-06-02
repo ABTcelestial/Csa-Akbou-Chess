@@ -1,5 +1,5 @@
-import { useEffect, useState, useRef, useCallback } from "react"
-import { useLocation, useNavigate } from "react-router-dom"
+import { useEffect, useState, useCallback } from "react"
+import { useLocation } from "react-router-dom"
 import { X, ChevronRight, SkipForward } from "lucide-react"
 import { useGuide } from "@/lib/GuideContext"
 
@@ -43,6 +43,47 @@ function useHighlight(selector: string | undefined, active: boolean) {
   }, [selector, active])
 }
 
+// ── Arrow pointing at highlighted element ─────────────────────────────────
+interface ArrowPos { top: number; left: number; pointUp: boolean }
+
+function useArrow(selector: string | undefined, active: boolean): ArrowPos | null {
+  const [pos, setPos] = useState<ArrowPos | null>(null)
+
+  useEffect(() => {
+    if (!active || !selector) { setPos(null); return }
+
+    const compute = () => {
+      const el = document.querySelector(selector)
+      if (!el) return
+      const r = el.getBoundingClientRect()
+      // If element is in top 180px → place arrow below it (pointing up ▲)
+      const pointUp = r.top < 180
+      setPos({
+        top: pointUp ? r.bottom + 8 : r.top - 38,
+        left: r.left + r.width / 2,
+        pointUp,
+      })
+    }
+
+    let attempts = 0
+    const tryFind = () => {
+      if (document.querySelector(selector)) compute()
+      else if (attempts++ < 10) setTimeout(tryFind, 320)
+    }
+    tryFind()
+
+    window.addEventListener("scroll", compute, { passive: true })
+    window.addEventListener("resize", compute)
+    return () => {
+      window.removeEventListener("scroll", compute)
+      window.removeEventListener("resize", compute)
+      setPos(null)
+    }
+  }, [selector, active])
+
+  return pos
+}
+
 // ── Main widget ────────────────────────────────────────────────────────────
 const GuideWidget = () => {
   const { activeGuide, currentStep, advanceStep, stopGuide } = useGuide()
@@ -58,6 +99,7 @@ const GuideWidget = () => {
   const { displayed, done } = useTypewriter(step?.message ?? "")
 
   useHighlight(step?.highlight, !!activeGuide)
+  const arrowPos = useArrow(step?.highlight, !!activeGuide)
 
   // ── Hint timer ─────────────────────────────────────────────────────────
   useEffect(() => {
@@ -143,6 +185,33 @@ const GuideWidget = () => {
   const progress = (currentStep / (activeGuide.steps.length - 1)) * 100
 
   return (
+    <>
+    {/* ── Arrow indicator ── */}
+    {arrowPos && (
+      <div
+        className="fixed z-[299] pointer-events-none flex flex-col items-center"
+        style={{
+          top: arrowPos.top,
+          left: arrowPos.left,
+          transform: "translateX(-50%)",
+        }}
+      >
+        <span
+          className="text-2xl drop-shadow-lg"
+          style={{
+            color: "hsl(var(--chess-gold))",
+            animation: arrowPos.pointUp
+              ? "arrow-bounce-up 0.75s ease-in-out infinite"
+              : "arrow-bounce-down 0.75s ease-in-out infinite",
+            display: "block",
+            lineHeight: 1,
+          }}
+        >
+          {arrowPos.pointUp ? "▲" : "▼"}
+        </span>
+      </div>
+    )}
+
     <div className="fixed bottom-5 right-4 z-[300] flex flex-col items-end gap-2 select-none pointer-events-none">
 
       {/* ── Speech bubble ── */}
@@ -255,6 +324,7 @@ const GuideWidget = () => {
         </div>
       </div>
     </div>
+    </>
   )
 }
 

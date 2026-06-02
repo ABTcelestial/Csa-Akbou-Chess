@@ -1,4 +1,28 @@
 import { createContext, useContext, useState, ReactNode } from "react"
+import { type Tournament } from "@/lib/supabase"
+
+// ── Mock tournament (used when guide is active but no real tournaments exist) ──
+export const MOCK_GUIDE_TOURNAMENT: Tournament = {
+  id: "__guide_test__",
+  title: "Tournoi de démonstration — Guide",
+  type: "Blitz",
+  date: "15 juin 2026",
+  date_iso: "2026-06-15",
+  cadence: "5+3",
+  rounds: 7,
+  location: "Akbou, Béjaïa",
+  description:
+    "Ce tournoi est utilisé par le guide interactif. Votre inscription ne sera pas enregistrée en base de données — mais la génération du PDF et l'envoi de l'email de confirmation fonctionnent normalement.",
+  homologue: false,
+  niveaux: "Tous niveaux",
+  fiches_techniques_urls: [],
+  is_past: false,
+  registrations_closed: false,
+  display_order: 0,
+  extra_places: [],
+  created_at: "2026-01-01T00:00:00.000Z",
+  updated_at: "2026-01-01T00:00:00.000Z",
+}
 
 // ── Trigger types ──────────────────────────────────────────────────────────
 export type StepTrigger =
