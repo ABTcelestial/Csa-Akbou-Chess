@@ -305,6 +305,7 @@ const emptyT = (): Omit<Tournament, 'id' | 'created_at' | 'updated_at'> => ({
   fiches_techniques_urls: [],
   is_past: false, display_order: 0,
   registrations_closed: false,
+  max_capacity: null,
   homologue: false,
   niveaux: "",
 })
@@ -323,6 +324,7 @@ const TournamentForm = ({ initial, onSave, onClose }: {
     fiches_techniques_urls: initial.fiches_techniques_urls || [],
     is_past: initial.is_past, display_order: initial.display_order || 0,
     registrations_closed: initial.registrations_closed || false,
+    max_capacity: initial.max_capacity ?? null,
   } : { ...emptyT() })
 
   // Places supplémentaires (4e, 5e, …) stockées comme tableau [{rank, name}]
@@ -431,6 +433,31 @@ const TournamentForm = ({ initial, onSave, onClose }: {
           </div>
 
 <div><label className={labelCls}>Description</label><textarea className={`${inputCls} min-h-[80px] resize-y`} value={form.description} onChange={e => set('description', e.target.value)} /></div>
+
+          {/* Limite de places */}
+          <div className={`rounded-xl border-2 p-4 transition-all ${form.max_capacity != null ? 'border-blue-300 bg-blue-50/40' : 'border-border'}`}>
+            <div className="flex items-center gap-3 mb-1">
+              <input type="checkbox" id="hasCapacity" checked={form.max_capacity != null} onChange={e => set('max_capacity', e.target.checked ? 50 : null)} className="w-4 h-4 accent-blue-500" />
+              <label htmlFor="hasCapacity" className="text-sm font-semibold cursor-pointer flex items-center gap-2">
+                🎟️ Limiter le nombre de places
+              </label>
+            </div>
+            <p className="text-xs text-muted-foreground ml-7 mb-2">
+              Les inscrits recevront un numéro d'ordre. Au-delà de la limite, ils sont placés en liste d'attente.
+            </p>
+            {form.max_capacity != null && (
+              <div className="ml-7 flex items-center gap-3">
+                <label className="text-xs font-medium whitespace-nowrap">Nombre de places :</label>
+                <input
+                  type="number"
+                  min={1}
+                  className={`${inputCls} w-28`}
+                  value={form.max_capacity ?? ''}
+                  onChange={e => set('max_capacity', e.target.value ? Math.max(1, parseInt(e.target.value)) : null)}
+                />
+              </div>
+            )}
+          </div>
 
           {/* Clôture des inscriptions */}
           <div className={`rounded-xl border-2 p-4 transition-all ${form.registrations_closed ? 'border-red-300 bg-red-50/50' : 'border-border'}`}>
@@ -2168,6 +2195,20 @@ const Highlight = ({ text, query }: { text: string; query: string }) => {
   )
 }
 
+function computePositions(regs: Registration[]) {
+  const sorted = [...regs].sort((a, b) =>
+    new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+  )
+  const map = new Map<string, { first: number; last: number }>()
+  let pos = 1
+  for (const r of sorted) {
+    const n = r.type === 'club' ? ((r.joueurs as unknown[])?.length ?? 1) : 1
+    map.set(r.id, { first: pos, last: pos + n - 1 })
+    pos += n
+  }
+  return map
+}
+
 const EMPTY_JOUEUR = { nom:'', prenom:'', fideId:'', dateNaissance:'' }
 const EMPTY_CLUB_FORM = { nomClub:'', responsable:'', telephone:'', email:'' }
 
@@ -2537,6 +2578,7 @@ const RegistrationsPanel = ({ allTournaments, allRegistrations, loading, deleteC
                 registration={cardReg}
                 tournament={{ title: cardTournament.title, date: cardTournament.date, location: cardTournament.location, type: cardTournament.type }}
                 cardId="confirmation-card-admin"
+                maxCapacity={cardTournament.max_capacity}
               />
             </div>
           </div>
@@ -2554,6 +2596,7 @@ const RegistrationsPanel = ({ allTournaments, allRegistrations, loading, deleteC
           registration={cardReg}
           tournament={{ title: cardTournament.title, date: cardTournament.date, location: cardTournament.location, type: cardTournament.type }}
           cardId="confirmation-card-admin-print"
+          maxCapacity={cardTournament.max_capacity}
         />
       </div>
     )}
@@ -2605,6 +2648,7 @@ const RegistrationsPanel = ({ allTournaments, allRegistrations, loading, deleteC
             const regs = allRegistrations.filter(r => r.tournament_id === tournament.id)
             const soloRegs = regs.filter(r => r.type === 'solo')
             const clubRegs = regs.filter(r => r.type === 'club')
+            const positions = tournament.max_capacity != null ? computePositions(regs) : new Map<string, { first: number; last: number }>()
 
             // Vérifie si ce tournoi a des matches directs (vs match via inscription)
             const tournamentNameMatches = q && (tournament.title.toLowerCase().includes(q) || tournament.date?.toLowerCase().includes(q))
@@ -2681,6 +2725,7 @@ const RegistrationsPanel = ({ allTournaments, allRegistrations, loading, deleteC
                           <table className="w-full text-sm">
                             <thead>
                               <tr className="border-b" style={{ background: "hsl(var(--chess-blue)/0.04)" }}>
+                                {tournament.max_capacity != null && <th className="text-left px-3 py-2.5 text-xs font-semibold text-muted-foreground w-16">Rang</th>}
                                 <th className="text-left px-4 py-2.5 text-xs font-semibold text-muted-foreground">Joueur</th>
                                 <th className="text-left px-4 py-2.5 text-xs font-semibold text-muted-foreground hidden sm:table-cell">FIDE ID</th>
                                 <th className="text-left px-4 py-2.5 text-xs font-semibold text-muted-foreground hidden md:table-cell">Club</th>
@@ -2698,6 +2743,20 @@ const RegistrationsPanel = ({ allTournaments, allRegistrations, loading, deleteC
                                 )
                                 return (
                                   <tr key={r.id} className={`border-b last:border-0 transition-colors ${rowMatches ? 'bg-yellow-50' : i % 2 === 1 ? 'bg-muted/20' : ''}`}>
+                                    {tournament.max_capacity != null && (
+                                      <td className="px-3 py-3">
+                                        {(() => {
+                                          const pos = positions.get(r.id)
+                                          if (!pos) return <span className="text-xs text-muted-foreground">—</span>
+                                          const curWl = pos.first > tournament.max_capacity!
+                                          return (
+                                            <span className={`text-xs font-bold px-1.5 py-0.5 rounded-full ${curWl ? 'bg-orange-100 text-orange-700' : 'bg-green-100 text-green-700'}`}>
+                                              {pos.first}/{tournament.max_capacity}
+                                            </span>
+                                          )
+                                        })()}
+                                      </td>
+                                    )}
                                     <td className="px-4 py-3 font-medium">
                                       <Highlight text={`${r.prenom || ''} ${r.nom || ''}`.trim()} query={regSearch} />
                                     </td>
@@ -2763,6 +2822,17 @@ const RegistrationsPanel = ({ allTournaments, allRegistrations, loading, deleteC
                                     <p className="font-bold text-sm flex items-center gap-2">
                                       <Building2 size={13} style={{ color: "hsl(var(--chess-gold-dark))" }} />
                                       <Highlight text={r.nom_club || ''} query={regSearch} />
+                                      {tournament.max_capacity != null && (() => {
+                                        const pos = positions.get(r.id)
+                                        if (!pos) return null
+                                        const anyWl = pos.last > tournament.max_capacity!
+                                        const label = pos.first === pos.last ? `${pos.first}` : `${pos.first}–${pos.last}`
+                                        return (
+                                          <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${anyWl ? 'bg-orange-100 text-orange-700' : 'bg-green-100 text-green-700'}`}>
+                                            {anyWl ? '⏳ ' : ''}{label}/{tournament.max_capacity}
+                                          </span>
+                                        )
+                                      })()}
                                     </p>
                                     <p className="text-xs text-muted-foreground mt-0.5">
                                       Responsable : <span className="font-medium"><Highlight text={r.responsable || ''} query={regSearch} /></span>

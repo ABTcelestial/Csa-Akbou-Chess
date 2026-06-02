@@ -5,6 +5,7 @@ interface ConfirmationCardProps {
   registration: Registration
   tournament: { title: string; date: string; location?: string; type?: string }
   cardId?: string
+  maxCapacity?: number | null
 }
 
 // Palette
@@ -27,11 +28,14 @@ const Row = ({ label, value }: RowProps) =>
     </div>
   ) : null
 
-const ConfirmationCard = ({ registration, tournament, cardId = "confirmation-card" }: ConfirmationCardProps) => {
+const ConfirmationCard = ({ registration, tournament, cardId = "confirmation-card", maxCapacity }: ConfirmationCardProps) => {
   const ref = `#${registration.id.slice(0, 8).toUpperCase()}`
   const dateInscrit = new Date(registration.created_at).toLocaleDateString("fr-FR", {
     day: "numeric", month: "long", year: "numeric",
   })
+  const order = registration.registration_order
+  const isWaitlist = registration.is_waitlist ?? false
+  const showCapacity = maxCapacity != null && order != null
 
   return (
     <div
@@ -73,17 +77,35 @@ const ConfirmationCard = ({ registration, tournament, cardId = "confirmation-car
             </h1>
           </div>
 
-          {/* Badge validé */}
-          <div style={{
-            flexShrink: 0,
-            background: "rgba(201,162,39,0.15)",
-            border: `2px solid ${GOLD}`,
-            borderRadius: 8,
-            padding: "6px 12px",
-            textAlign: "center",
-          }}>
-            <div style={{ fontSize: 18 }}>✓</div>
-            <p style={{ margin: 0, fontSize: 9, fontWeight: 800, color: GOLD, letterSpacing: "0.1em" }}>VALIDÉE</p>
+          {/* Badge validé / capacité */}
+          <div style={{ flexShrink: 0, display: "flex", flexDirection: "column", gap: 6, alignItems: "flex-end" }}>
+            <div style={{
+              background: "rgba(201,162,39,0.15)",
+              border: `2px solid ${GOLD}`,
+              borderRadius: 8,
+              padding: "6px 12px",
+              textAlign: "center",
+            }}>
+              <div style={{ fontSize: 18 }}>✓</div>
+              <p style={{ margin: 0, fontSize: 9, fontWeight: 800, color: GOLD, letterSpacing: "0.1em" }}>VALIDÉE</p>
+            </div>
+            {showCapacity && (
+              <div style={{
+                background: isWaitlist ? "rgba(234,88,12,0.18)" : "rgba(22,163,74,0.15)",
+                border: `2px solid ${isWaitlist ? "#ea580c" : "#16a34a"}`,
+                borderRadius: 8,
+                padding: "5px 10px",
+                textAlign: "center",
+                minWidth: 62,
+              }}>
+                <p style={{ margin: 0, fontSize: 14, fontWeight: 900, color: isWaitlist ? "#ea580c" : "#16a34a", letterSpacing: "0.04em", lineHeight: 1.1 }}>
+                  {order} / {maxCapacity}
+                </p>
+                <p style={{ margin: 0, fontSize: 8, fontWeight: 800, color: isWaitlist ? "#ea580c" : "#16a34a", letterSpacing: "0.08em", textTransform: "uppercase" }}>
+                  {isWaitlist ? "ATTENTE" : "PLACE"}
+                </p>
+              </div>
+            )}
           </div>
         </div>
 
@@ -149,27 +171,75 @@ const ConfirmationCard = ({ registration, tournament, cardId = "confirmation-car
             <div style={{ background: WHITE, borderRadius: 10, border: `1px solid ${GRAY_BORDER}`, overflow: "hidden" }}>
               {/* En-tête table */}
               <div style={{ display: "flex", background: NAVY, padding: "7px 14px", gap: 8 }}>
-                {["#", "Joueur", "Naissance", "FIDE ID"].map((h, i) => (
+                {[showCapacity ? "Rang" : "#", "Joueur", "Naissance", "FIDE ID"].map((h, i) => (
                   <p key={i} style={{ margin: 0, fontSize: 10, fontWeight: 700, color: GOLD, flex: i === 1 ? 2 : 1, letterSpacing: "0.05em" }}>{h}</p>
                 ))}
               </div>
-              {registration.joueurs.map((j, i) => (
-                <div key={i} style={{
-                  display: "flex", padding: "8px 14px", gap: 8,
-                  background: i % 2 === 1 ? GRAY_BG : WHITE,
-                  borderTop: i > 0 ? `1px solid ${GRAY_BORDER}` : "none",
-                  alignItems: "center",
-                }}>
-                  <p style={{ margin: 0, flex: 1, fontSize: 11, color: GRAY_TEXT, fontWeight: 700 }}>{i + 1}</p>
-                  <p style={{ margin: 0, flex: 2, fontSize: 12, color: DARK_TEXT, fontWeight: 700 }}>{j.prenom} {j.nom}</p>
-                  <p style={{ margin: 0, flex: 1, fontSize: 11, color: GRAY_TEXT }}>{j.dateNaissance || "—"}</p>
-                  <p style={{ margin: 0, flex: 1, fontSize: 11, color: GRAY_TEXT }}>{j.fideId || "—"}</p>
-                </div>
-              ))}
+              {registration.joueurs.map((j, i) => {
+                const playerOrder = showCapacity ? (order! + i) : (i + 1)
+                const playerWaitlist = showCapacity && playerOrder > maxCapacity!
+                return (
+                  <div key={i} style={{
+                    display: "flex", padding: "8px 14px", gap: 8,
+                    background: i % 2 === 1 ? GRAY_BG : WHITE,
+                    borderTop: i > 0 ? `1px solid ${GRAY_BORDER}` : "none",
+                    alignItems: "center",
+                  }}>
+                    <p style={{ margin: 0, flex: 1, fontSize: showCapacity ? 10 : 11, color: playerWaitlist ? "#ea580c" : (showCapacity ? "#16a34a" : GRAY_TEXT), fontWeight: 800 }}>
+                      {showCapacity ? `${playerOrder}/${maxCapacity}` : String(i + 1)}
+                    </p>
+                    <p style={{ margin: 0, flex: 2, fontSize: 12, color: DARK_TEXT, fontWeight: 700 }}>{j.prenom} {j.nom}</p>
+                    <p style={{ margin: 0, flex: 1, fontSize: 11, color: GRAY_TEXT }}>{j.dateNaissance || "—"}</p>
+                    <p style={{ margin: 0, flex: 1, fontSize: 11, color: GRAY_TEXT }}>{j.fideId || "—"}</p>
+                  </div>
+                )
+              })}
             </div>
           </div>
         )}
       </div>
+
+      {/* ── NOTE CAPACITÉ ───────────────────────────────────── */}
+      {showCapacity && (() => {
+        const numJoueurs = registration.type === "club" ? (registration.joueurs?.length ?? 1) : 1
+        const lastOrder = order! + numJoueurs - 1
+        const allWl = order! > maxCapacity!
+        const anyWl = lastOrder > maxCapacity!
+        const noteWl = registration.type === "solo" ? isWaitlist : anyWl
+
+        let message: string
+        if (registration.type === "club") {
+          if (allWl) {
+            message = `Vos ${numJoueurs} joueur${numJoueurs > 1 ? "s" : ""} ont été placés en liste d'attente (positions ${order}–${lastOrder}/${maxCapacity}).`
+          } else if (anyWl) {
+            const inList = maxCapacity! - order! + 1
+            const onWait = lastOrder - maxCapacity!
+            message = `${inList} joueur${inList > 1 ? "s" : ""} confirmé${inList > 1 ? "s" : ""} (positions ${order}–${maxCapacity}) · ${onWait} en liste d'attente (positions ${maxCapacity! + 1}–${lastOrder}).`
+          } else {
+            message = `Vos ${numJoueurs} joueur${numJoueurs > 1 ? "s" : ""} sont inscrits (positions ${order}–${lastOrder} sur ${maxCapacity}).`
+          }
+        } else {
+          message = isWaitlist
+            ? `Vous avez été placé(e) en liste d'attente (position ${order}/${maxCapacity}). Votre inscription est bien enregistrée.`
+            : `Vous êtes ${order === 1 ? "le/la premier(e) inscrit(e)" : `la ${order}ème personne inscrite`} sur ${maxCapacity} places disponibles.`
+        }
+
+        return (
+          <div style={{
+            background: noteWl ? "#fff7ed" : "#f0fdf4",
+            borderTop: `2px solid ${noteWl ? "#fed7aa" : "#bbf7d0"}`,
+            padding: "10px 28px",
+            display: "flex",
+            alignItems: "center",
+            gap: 10,
+          }}>
+            <span style={{ fontSize: 18, flexShrink: 0 }}>{noteWl ? "⏳" : "✅"}</span>
+            <p style={{ margin: 0, fontSize: 11, color: noteWl ? "#9a3412" : "#14532d", fontWeight: 600, lineHeight: 1.4 }}>
+              {message}
+            </p>
+          </div>
+        )
+      })()}
 
       {/* ── RÉFÉRENCE ───────────────────────────────────────── */}
       <div style={{

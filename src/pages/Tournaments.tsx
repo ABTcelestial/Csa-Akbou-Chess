@@ -84,6 +84,7 @@ const TournamentModal = ({ tournament, onClose, onOpenLightbox }: {
   const [clubForm, setClubForm] = useState({ nomClub: "", responsable: "", telephone: "" });
   const [joueurs, setJoueurs] = useState([{ nom: "", prenom: "", fideId: "", dateNaissance: "" }]);
   const [savedRegistration, setSavedRegistration] = useState<Registration | null>(null);
+  const [savedMaxCapacity, setSavedMaxCapacity] = useState<number | null>(null);
   const [emailSent, setEmailSent] = useState(false);
   const [downloading, setDownloading] = useState(false);
 
@@ -153,9 +154,13 @@ const TournamentModal = ({ tournament, onClose, onOpenLightbox }: {
           created_at: new Date().toISOString(),
         };
       } else if (inscriptionType === 'solo') {
-        row = await submitRegistration({ tournament_id: tournament.id, type: 'solo', nom: soloForm.nom, prenom: soloForm.prenom, fide_id: soloForm.fideId, club: soloForm.club, date_naissance: soloForm.dateNaissance, email });
+        const result = await submitRegistration({ tournament_id: tournament.id, type: 'solo', nom: soloForm.nom, prenom: soloForm.prenom, fide_id: soloForm.fideId, club: soloForm.club, date_naissance: soloForm.dateNaissance, email });
+        row = result;
+        setSavedMaxCapacity(result.maxCapacity);
       } else {
-        row = await submitRegistration({ tournament_id: tournament.id, type: 'club', nom_club: clubForm.nomClub, responsable: clubForm.responsable, telephone: clubForm.telephone, joueurs, email });
+        const result = await submitRegistration({ tournament_id: tournament.id, type: 'club', nom_club: clubForm.nomClub, responsable: clubForm.responsable, telephone: clubForm.telephone, joueurs, email });
+        row = result;
+        setSavedMaxCapacity(result.maxCapacity);
       }
       setSavedRegistration(row);
       setStep("success");
@@ -170,6 +175,7 @@ const TournamentModal = ({ tournament, onClose, onOpenLightbox }: {
             type: inscriptionType,
             tournament: { title: tournament.title, date: tournament.date, location: tournament.location, type: tournament.type },
             registration: row,
+            maxCapacity: (row as any).maxCapacity ?? null,
           }),
         }).then(r => { if (r.ok) setEmailSent(true) }).catch(() => {});
       }
@@ -450,6 +456,7 @@ const TournamentModal = ({ tournament, onClose, onOpenLightbox }: {
                 <ConfirmationCard
                   registration={savedRegistration}
                   tournament={{ title: tournament.title, date: tournament.date, location: tournament.location, type: tournament.type }}
+                  maxCapacity={savedMaxCapacity}
                 />
               </div>
 
@@ -504,6 +511,7 @@ const TournamentModal = ({ tournament, onClose, onOpenLightbox }: {
             registration={savedRegistration}
             tournament={{ title: tournament.title, date: tournament.date, location: tournament.location, type: tournament.type }}
             cardId="confirmation-card-print"
+            maxCapacity={savedMaxCapacity}
           />
         </div>
       )}
@@ -520,6 +528,7 @@ const Tournaments = () => {
   const PAST_PER_PAGE = 8;
   const [searchParams, setSearchParams] = useSearchParams();
   const { activeGuide } = useGuide();
+  const [regCounts, setRegCounts] = useState<Record<string, number>>({});
 
   const { data: all, loading } = useTournaments();
 
@@ -545,6 +554,19 @@ const Tournaments = () => {
 
   const upcoming = all.filter(t => !t.is_past);
   const past     = all.filter(t => t.is_past);
+
+  // Batch-fetch registration counts for upcoming tournaments with capacity limits
+  const upcomingIds = upcoming.map(t => t.id).join(',');
+  useEffect(() => {
+    const withCap = upcoming.filter(t => t.max_capacity != null && t.id !== "__guide_test__");
+    if (withCap.length === 0) return;
+    Promise.all(
+      withCap.map(t =>
+        supabase.rpc('get_registration_count', { p_tournament_id: t.id })
+          .then(({ data }) => [t.id, typeof data === 'number' ? data : 0] as [string, number])
+      )
+    ).then(results => setRegCounts(Object.fromEntries(results))).catch(() => {});
+  }, [upcomingIds]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Inscription guides always use mock (even if real tournaments exist) to avoid accidental real registrations
   const isInscriptionGuide = activeGuide?.id === "inscription-solo" || activeGuide?.id === "inscription-club";
@@ -693,6 +715,19 @@ const Tournaments = () => {
                           {t.registrations_closed && (
                             <span className="flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold bg-red-50 text-red-500">
                               <Lock size={9} /> Inscriptions clôturées
+                            </span>
+                          )}
+                          {t.max_capacity != null && regCounts[t.id] !== undefined && (
+                            <span className={`flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold ${
+                              regCounts[t.id] >= t.max_capacity
+                                ? 'bg-red-50 text-red-600'
+                                : 'bg-blue-50 text-blue-600'
+                            }`}>
+                              <Users size={9} />
+                              {regCounts[t.id] >= t.max_capacity
+                                ? 'Complet'
+                                : `${t.max_capacity - regCounts[t.id]} place${t.max_capacity - regCounts[t.id] > 1 ? 's' : ''} restante${t.max_capacity - regCounts[t.id] > 1 ? 's' : ''} sur ${t.max_capacity}`
+                              }
                             </span>
                           )}
                         </div>

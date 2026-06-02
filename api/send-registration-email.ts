@@ -33,6 +33,8 @@ interface RegistrationPayload {
   telephone?: string
   joueurs?: JoueurPayload[]
   email?: string
+  registration_order?: number
+  is_waitlist?: boolean
   created_at: string
 }
 
@@ -56,6 +58,7 @@ function buildEmailHtml(
   type: 'solo' | 'club',
   tournament: TournamentPayload,
   registration: RegistrationPayload,
+  maxCapacity: number | null,
 ): string {
   const ref = `#${registration.id.slice(0, 8).toUpperCase()}`
   const dateInscrit = new Date(registration.created_at).toLocaleDateString('fr-FR', {
@@ -78,6 +81,7 @@ function buildEmailHtml(
     ${row('Email', registration.email)}
   ` : ''
 
+  const baseOrder = registration.registration_order ?? null
   const joueurRows = type === 'club' && registration.joueurs?.length ? `
     <tr><td colspan="2" style="padding:20px 0 10px">
       <p style="margin:0;font-size:10px;font-weight:800;letter-spacing:0.15em;color:${NAVY};text-transform:uppercase">
@@ -87,18 +91,64 @@ function buildEmailHtml(
     <tr><td colspan="2" style="padding:0">
       <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;border-radius:10px;overflow:hidden;border:1px solid ${GRAY_BORDER}">
         <tr style="background:${NAVY}">
-          <td style="padding:8px 12px;font-size:10px;font-weight:700;color:${GOLD};width:28px">#</td>
+          <td style="padding:8px 12px;font-size:10px;font-weight:700;color:${GOLD};width:52px">${maxCapacity != null ? 'Rang' : '#'}</td>
           <td style="padding:8px 12px;font-size:10px;font-weight:700;color:${GOLD}">Joueur</td>
           <td style="padding:8px 12px;font-size:10px;font-weight:700;color:${GOLD}">Naissance</td>
           <td style="padding:8px 12px;font-size:10px;font-weight:700;color:${GOLD}">FIDE ID</td>
         </tr>
-        ${(registration.joueurs ?? []).map((j, i) => `
+        ${(registration.joueurs ?? []).map((j, i) => {
+          const pOrder = maxCapacity != null && baseOrder != null ? baseOrder + i : i + 1
+          const pWaitlist = maxCapacity != null && pOrder > maxCapacity
+          const rankColor = maxCapacity != null ? (pWaitlist ? '#ea580c' : '#16a34a') : GRAY_TEXT
+          const rankLabel = maxCapacity != null ? `${pOrder}/${maxCapacity}` : String(i + 1)
+          return `
         <tr style="background:${i % 2 === 1 ? GRAY_BG : WHITE};border-top:1px solid ${GRAY_BORDER}">
-          <td style="padding:8px 12px;font-size:11px;color:${GRAY_TEXT};font-weight:700">${i + 1}</td>
+          <td style="padding:8px 12px;font-size:11px;color:${rankColor};font-weight:800">${rankLabel}</td>
           <td style="padding:8px 12px;font-size:12px;color:${DARK_TEXT};font-weight:700">${j.prenom} ${j.nom}</td>
           <td style="padding:8px 12px;font-size:11px;color:${GRAY_TEXT}">${j.dateNaissance ?? '—'}</td>
           <td style="padding:8px 12px;font-size:11px;color:${GRAY_TEXT}">${j.fideId || '—'}</td>
-        </tr>`).join('')}
+        </tr>`
+        }).join('')}
+      </table>
+    </td></tr>
+  ` : ''
+
+  const numJoueursEmail = type === 'club' ? (registration.joueurs?.length ?? 1) : 1
+  const lastOrderEmail = baseOrder != null ? baseOrder + numJoueursEmail - 1 : null
+  const allWlEmail = baseOrder != null && maxCapacity != null && baseOrder > maxCapacity
+  const anyWlEmail = lastOrderEmail != null && maxCapacity != null && lastOrderEmail > maxCapacity
+  const noteWlEmail = type === 'solo' ? (registration.is_waitlist ?? false) : anyWlEmail
+
+  let noteMsg = ''
+  if (baseOrder != null && maxCapacity != null) {
+    if (type === 'club') {
+      if (allWlEmail) {
+        noteMsg = `Vos ${numJoueursEmail} joueur${numJoueursEmail > 1 ? 's' : ''} ont été placés en liste d'attente (positions ${baseOrder}–${lastOrderEmail}/${maxCapacity}).`
+      } else if (anyWlEmail) {
+        const inList = maxCapacity - baseOrder + 1
+        const onWait = lastOrderEmail! - maxCapacity
+        noteMsg = `${inList} joueur${inList > 1 ? 's' : ''} confirmé${inList > 1 ? 's' : ''} (positions ${baseOrder}–${maxCapacity}) · ${onWait} en liste d'attente (positions ${maxCapacity + 1}–${lastOrderEmail}).`
+      } else {
+        noteMsg = `Vos ${numJoueursEmail} joueur${numJoueursEmail > 1 ? 's' : ''} sont inscrits (positions ${baseOrder}–${lastOrderEmail} sur ${maxCapacity}).`
+      }
+    } else {
+      noteMsg = registration.is_waitlist
+        ? `Vous avez été placé(e) en liste d'attente (position ${baseOrder}/${maxCapacity}). Votre inscription est bien enregistrée.`
+        : `Vous êtes ${baseOrder === 1 ? 'le/la premier(e) inscrit(e)' : `la ${baseOrder}ème personne inscrite`} sur ${maxCapacity} places disponibles.`
+    }
+  }
+
+  const capacityNote = maxCapacity != null && noteMsg ? `
+    <tr><td colspan="2" style="padding:14px 0 0">
+      <table cellpadding="0" cellspacing="0" width="100%">
+        <tr>
+          <td style="background:${noteWlEmail ? '#fff7ed' : '#f0fdf4'};border:1px solid ${noteWlEmail ? '#fed7aa' : '#bbf7d0'};border-radius:8px;padding:10px 14px">
+            <table cellpadding="0" cellspacing="0"><tr>
+              <td style="font-size:16px;vertical-align:top;padding-right:10px;width:24px">${noteWlEmail ? '⏳' : '✅'}</td>
+              <td style="font-size:11px;color:${noteWlEmail ? '#9a3412' : '#14532d'};font-weight:600;line-height:1.4">${noteMsg}</td>
+            </tr></table>
+          </td>
+        </tr>
       </table>
     </td></tr>
   ` : ''
@@ -130,11 +180,16 @@ function buildEmailHtml(
             <p style="margin:1px 0 0;font-size:10px;color:rgba(255,255,255,0.5)">النادي الهواوي الرياضي أقبو للشطرنج</p>
             <h1 style="margin:5px 0 0;font-size:17px;font-weight:900;color:${WHITE};letter-spacing:0.03em;line-height:1.2">CONFIRMATION D'INSCRIPTION</h1>
           </td>
-          <td style="vertical-align:middle;text-align:center;width:80px">
-            <div style="background:rgba(201,162,39,0.15);border:2px solid ${GOLD};border-radius:8px;padding:6px 10px;display:inline-block">
+          <td style="vertical-align:middle;text-align:center;width:96px">
+            <div style="background:rgba(201,162,39,0.15);border:2px solid ${GOLD};border-radius:8px;padding:6px 10px;display:inline-block;margin-bottom:${maxCapacity != null ? '6px' : '0'}">
               <div style="font-size:20px;color:${GOLD}">✓</div>
               <p style="margin:0;font-size:9px;font-weight:800;color:${GOLD};letter-spacing:0.1em">VALIDÉE</p>
             </div>
+            ${maxCapacity != null ? `
+            <div style="background:${registration.is_waitlist ? 'rgba(234,88,12,0.18)' : 'rgba(22,163,74,0.15)'};border:2px solid ${registration.is_waitlist ? '#ea580c' : '#16a34a'};border-radius:8px;padding:5px 8px;display:inline-block">
+              <p style="margin:0;font-size:13px;font-weight:900;color:${registration.is_waitlist ? '#ea580c' : '#16a34a'};line-height:1.1">${registration.registration_order ?? '?'} / ${maxCapacity}</p>
+              <p style="margin:0;font-size:8px;font-weight:800;color:${registration.is_waitlist ? '#ea580c' : '#16a34a'};letter-spacing:0.08em;text-transform:uppercase">${registration.is_waitlist ? 'ATTENTE' : 'PLACE'}</p>
+            </div>` : ''}
           </td>
         </tr>
       </table>
@@ -171,6 +226,7 @@ function buildEmailHtml(
           ${soloRows}
           ${clubRows}
           ${joueurRows}
+          ${capacityNote}
         </table>
       </div>
     </td>
@@ -223,11 +279,12 @@ function buildEmailHtml(
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'POST') return res.status(405).end()
 
-  const { email, type, tournament, registration } = req.body as {
+  const { email, type, tournament, registration, maxCapacity } = req.body as {
     email: string
     type: 'solo' | 'club'
     tournament: TournamentPayload
     registration: RegistrationPayload
+    maxCapacity?: number | null
   }
 
   if (!email || !type || !tournament || !registration) {
@@ -239,7 +296,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       from: 'CSA Akbou Chess <inscriptions@csa-akbou-chess.com>',
       to: email,
       subject: `Confirmation d'inscription — ${tournament.title}`,
-      html: buildEmailHtml(type, tournament, registration),
+      html: buildEmailHtml(type, tournament, registration, maxCapacity ?? null),
     })
     return res.status(200).json({ ok: true })
   } catch (err) {

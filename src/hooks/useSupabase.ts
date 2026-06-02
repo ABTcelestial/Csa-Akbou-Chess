@@ -22,7 +22,7 @@ const TOURNAMENTS_META = [
   'description','homologue','niveaux','is_past','extra_places',
   'winner','participants','winner_medal','winner_note',
   'podium_1','podium_2','podium_3',
-  'registrations_closed','display_order','created_at','updated_at',
+  'registrations_closed','max_capacity','display_order','created_at','updated_at',
   'fiches_techniques_urls',
 ].join(',')
 
@@ -57,7 +57,7 @@ export function useTournaments() {
       'title','date','date_iso','cadence','type','rounds','location',
       'description','homologue','niveaux',
       'fiches_techniques_urls','is_past','extra_places',
-      'display_order','registrations_closed',
+      'display_order','registrations_closed','max_capacity',
     ]
     return Object.fromEntries(
       Object.entries(t).filter(([k]) => KNOWN_COLS.includes(k))
@@ -363,16 +363,34 @@ export interface Registration {
   date_naissance?: string
   joueurs?: { nom: string; prenom: string; fideId: string; dateNaissance: string }[]
   email?: string
+  registration_order?: number
+  is_waitlist?: boolean
   created_at: string
 }
 
-export async function submitRegistration(data: Omit<Registration, 'id' | 'created_at'>): Promise<Registration> {
-  // On génère l'UUID côté client pour éviter un SELECT (public n'a que INSERT via RLS)
+export async function submitRegistration(
+  data: Omit<Registration, 'id' | 'created_at' | 'registration_order' | 'is_waitlist'>
+): Promise<Registration & { maxCapacity: number | null }> {
+  // Récupère la capacité max du tournoi
+  const { data: tData } = await supabase
+    .from('tournaments').select('max_capacity').eq('id', data.tournament_id).single()
+  const maxCapacity: number | null = tData?.max_capacity ?? null
+
+  // Compte actuel des inscrits (joueurs individuels)
+  const { data: countData } = await supabase.rpc('get_registration_count', { p_tournament_id: data.tournament_id })
+  const currentCount = typeof countData === 'number' ? countData : 0
+
+  const numPlayers = data.type === 'club' ? (data.joueurs?.length ?? 1) : 1
+  const registrationOrder = currentCount + 1
+  const isWaitlist = maxCapacity !== null && (currentCount + numPlayers) > maxCapacity
+
   const id = crypto.randomUUID()
   const created_at = new Date().toISOString()
-  const { error } = await supabase.from('registrations').insert({ ...data, id })
+  const { error } = await supabase.from('registrations').insert({
+    ...data, id, registration_order: registrationOrder, is_waitlist: isWaitlist,
+  })
   if (error) throw error
-  return { ...data, id, created_at } as Registration
+  return { ...data, id, created_at, registration_order: registrationOrder, is_waitlist: isWaitlist, maxCapacity }
 }
 
 export function useRegistrations(tournamentId?: string) {
@@ -406,12 +424,25 @@ export function useRegistrations(tournamentId?: string) {
     setData(prev => prev.map(r => r.id === id ? { ...r, ...patch } : r))
   }
 
-  const create = async (data: Omit<Registration, 'id' | 'created_at'>): Promise<Registration> => {
+  const create = async (data: Omit<Registration, 'id' | 'created_at' | 'registration_order' | 'is_waitlist'>): Promise<Registration> => {
+    const { data: tData } = await supabase
+      .from('tournaments').select('max_capacity').eq('id', data.tournament_id).single()
+    const maxCapacity: number | null = tData?.max_capacity ?? null
+
+    const { data: countData } = await supabase.rpc('get_registration_count', { p_tournament_id: data.tournament_id })
+    const currentCount = typeof countData === 'number' ? countData : 0
+
+    const numPlayers = data.type === 'club' ? (data.joueurs?.length ?? 1) : 1
+    const registrationOrder = currentCount + 1
+    const isWaitlist = maxCapacity !== null && (currentCount + numPlayers) > maxCapacity
+
     const id = crypto.randomUUID()
     const created_at = new Date().toISOString()
-    const { error } = await supabase.from('registrations').insert({ ...data, id })
+    const { error } = await supabase.from('registrations').insert({
+      ...data, id, registration_order: registrationOrder, is_waitlist: isWaitlist,
+    })
     if (error) throw error
-    const reg = { ...data, id, created_at } as Registration
+    const reg = { ...data, id, created_at, registration_order: registrationOrder, is_waitlist: isWaitlist } as Registration
     setData(prev => [reg, ...prev])
     return reg
   }
