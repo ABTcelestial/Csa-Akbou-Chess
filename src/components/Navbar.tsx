@@ -3,6 +3,7 @@ import { Link, useLocation } from "react-router-dom";
 import { Menu, X, Moon, Sun } from "lucide-react";
 import { useSiteConfig } from "@/lib/SiteConfigContext";
 import logoClub from "@/assets/logo-club.jpg";
+import SiteGuide from "@/components/SiteGuide";
 
 const navLinks = [
   { label: "Accueil", path: "/" },
@@ -85,6 +86,9 @@ const Navbar = () => {
 
         {/* Actions droite */}
         <div className="flex items-center gap-1">
+          {/* Guide / Help */}
+          <SiteGuide />
+
           {/* Toggle dark mode */}
           <button
             onClick={() => setIsDark(d => !d)}
